@@ -8,53 +8,96 @@
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
+      background-color: #f0f2f5;
     }
     #app {
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
+    }
+    #toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: #2c3e50;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+    }
+    #toolbar button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #toolbar button:hover {
+      background-color: #2980b9;
     }
     #burger {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
       font-size: 24px;
       cursor: pointer;
+      background: none;
+      border: none;
+      color: white;
     }
     #sidebar {
       position: fixed;
-      top: 0;
+      top: 50px;
       left: -300px;
       width: 300px;
-      height: 100%;
-      background: #f4f4f4;
+      height: calc(100% - 50px);
+      background: #34495e;
+      color: white;
       transition: left 0.3s;
       padding: 20px;
       box-sizing: border-box;
       z-index: 999;
+      overflow-y: auto;
     }
     #sidebar.open {
       left: 0;
     }
     #sidebar input {
       width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: none;
     }
     #sidebar ul {
       list-style: none;
       padding: 0;
-      max-height: 70vh;
-      overflow-y: auto;
     }
     #sidebar li {
-      padding: 5px 0;
+      padding: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #sidebar li button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #sidebar li button:hover {
+      background-color: #c0392b;
     }
     #main {
-      margin-left: 50px;
+      margin-top: 60px;
       padding: 20px;
       flex-grow: 1;
     }
@@ -62,9 +105,40 @@
       width: 100%;
       max-width: 1200px;
       margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    #selected-series {
+      margin-top: 20px;
     }
     #selected-series div {
+      background: white;
+      padding: 10px;
       margin: 10px 0;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #selected-series select {
+      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    #selected-series button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #selected-series button:hover {
+      background-color: #c0392b;
     }
     #create-series-modal {
       position: fixed;
@@ -73,38 +147,69 @@
       transform: translate(-50%, -50%);
       background: white;
       padding: 20px;
-      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       z-index: 1000;
       display: none;
+      width: 400px;
     }
     #create-series-modal.open {
       display: block;
     }
-    button {
-      padding: 5px 10px;
-      cursor: pointer;
+    #create-series-modal h3 {
+      margin-top: 0;
     }
-    select {
-      padding: 5px;
+    #create-series-modal select, #create-series-modal input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    #create-series-modal button {
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-right: 10px;
+    }
+    #create-series-modal button:hover {
+      background-color: #27ae60;
     }
     @media (max-width: 768px) {
+      #toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      #toolbar button {
+        margin-top: 10px;
+      }
       #main {
-        margin-left: 0;
+        margin-top: 100px;
       }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <button id="burger" @click="toggleSidebar">☰</button>
+    <div id="toolbar">
+      <button id="burger" @click="toggleSidebar">☰</button>
+      <div>
+        <button @click="openCreateSeriesModal">Utwórz nową serię</button>
+      </div>
+    </div>
     <div id="sidebar" :class="{ open: isSidebarOpen }">
       <input type="text" v-model="searchTerm" placeholder="Wyszukaj serie">
       <ul>
         <li v-for="series in filteredSeries" :key="series.id">
-          {{ series.name }} <button @click="addToChart(series.id)">Dodaj</button>
+          {{ series.name }}
+          <button v-if="isSelected(series.id)" @click="removeFromChart(series.id)">Usuń</button>
+          <button v-else @click="addToChart(series.id)">Dodaj</button>
         </li>
       </ul>
-      <button @click="openCreateSeriesModal">Utwórz nową serię</button>
     </div>
     <div id="main">
       <div id="chart"></div>
@@ -124,14 +229,14 @@
     </div>
     <div id="create-series-modal" :class="{ open: isCreateModalOpen }">
       <h3>Utwórz nową serię</h3>
-      <select v-model="createSeries.seriesA" multiple size="5">
+      <select v-model="createSeries.seriesA">
         <option v-for="series in seriesData" :value="series.id" :key="series.id">{{ series.name }}</option>
       </select>
       <select v-model="createSeries.operation">
         <option value="add">Dodawanie (+)</option>
         <option value="subtract">Odejmowanie (-)</option>
       </select>
-      <select v-model="createSeries.seriesB" multiple size="5">
+      <select v-model="createSeries.seriesB">
         <option v-for="series in seriesData" :value="series.id" :key="series.id">{{ series.name }}</option>
       </select>
       <input v-model="createSeries.name" placeholder="Nazwa nowej serii">
@@ -175,8 +280,8 @@
         isCreateModalOpen: false,
         nextId: 1,
         createSeries: {
-          seriesA: [],
-          seriesB: [],
+          seriesA: null,
+          seriesB: null,
           operation: 'add',
           name: ''
         }
@@ -200,28 +305,31 @@
         removeFromChart(id) {
           this.selectedSeries = this.selectedSeries.filter(s => s.id !== id);
         },
+        isSelected(id) {
+          return this.selectedSeries.some(s => s.id === id);
+        },
         getSeriesName(id) {
           const series = this.seriesData.find(s => s.id === id);
           return series ? series.name : '';
         },
         openCreateSeriesModal() {
           this.isCreateModalOpen = true;
-          this.createSeries.seriesA = [];
-          this.createSeries.seriesB = [];
+          this.createSeries.seriesA = null;
+          this.createSeries.seriesB = null;
           this.createSeries.operation = 'add';
           this.createSeries.name = '';
         },
         createNewSeries() {
-          if (this.createSeries.seriesA.length !== 1 || this.createSeries.seriesB.length !== 1) {
-            alert('Wybierz dokładnie jedną serię dla każdej operacji.');
+          if (!this.createSeries.seriesA || !this.createSeries.seriesB) {
+            alert('Wybierz dwie serie do operacji.');
             return;
           }
           if (!this.createSeries.name) {
             alert('Podaj nazwę nowej serii.');
             return;
           }
-          const seriesA = this.seriesData.find(s => s.id === this.createSeries.seriesA[0]);
-          const seriesB = this.seriesData.find(s => s.id === this.createSeries.seriesB[0]);
+          const seriesA = this.seriesData.find(s => s.id === this.createSeries.seriesA);
+          const seriesB = this.seriesData.find(s => s.id === this.createSeries.seriesB);
           const newData = seriesA.data.map((d, i) => {
             const valueA = d.value;
             const valueB = seriesB.data[i].value;
