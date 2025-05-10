@@ -1,6 +1,87 @@
-### index.html
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini-FRED</title>
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- HEADER -->
+  <header class="flex items-center justify-between p-4 bg-white shadow-md">
+    <button id="burger" class="md:hidden">☰</button>
+    <h1 class="text-xl font-semibold">Mini-FRED</h1>
+    <input id="search" type="text" placeholder="Szukaj serii..." class="border rounded px-2 py-1 w-1/3" />
+  </header>
 
-````html
+  <!-- TOOLBAR -->
+  <div id="toolbar" class="p-4 bg-gray-100 flex flex-wrap items-center gap-2">
+    <span class="font-semibold">Zakres:</span>
+    <button data-range="1" class="range-btn px-2 py-1 bg-white rounded shadow">1M</button>
+    <button data-range="3" class="range-btn px-2 py-1 bg-white rounded shadow">3M</button>
+    <button data-range="6" class="range-btn px-2 py-1 bg-white rounded shadow">6M</button>
+    <button data-range="12" class="range-btn px-2 py-1 bg-white rounded shadow">1Y</button>
+    <button data-range="60" class="range-btn px-2 py-1 bg-white rounded shadow">5Y</button>
+    <button data-range="120" class="range-btn px-2 py-1 bg-white rounded shadow">10Y</button>
+    <button data-range="0" class="range-btn px-2 py-1 bg-white rounded shadow">All</button>
+
+    <input id="date-from" type="date" class="border rounded px-2 py-1" />
+    <input id="date-to" type="date" class="border rounded px-2 py-1" />
+    <button id="range-apply" class="px-2 py-1 bg-indigo-500 text-white rounded shadow">Apply</button>
+
+    <label class="flex items-center space-x-1 ml-4">
+      <input id="toggle-log" type="checkbox" />
+      <span>Log Y</span>
+    </label>
+
+    <span class="font-semibold ml-4">MA:</span>
+    <select id="ma-period" class="border rounded px-2 py-1">
+      <option value="0">None</option>
+      <option value="7">7</option>
+      <option value="30">30</option>
+      <option value="90">90</option>
+    </select>
+    <button id="add-ma" class="px-2 py-1 bg-green-500 text-white rounded shadow">Add MA</button>
+
+    <button id="export-img" class="px-2 py-1 bg-gray-800 text-white rounded shadow ml-auto">Download PNG</button>
+    <button id="export-csv" class="px-2 py-1 bg-gray-800 text-white rounded shadow">Export CSV</button>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="flex min-h-[calc(100vh-4rem)]">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="hidden md:block w-64 bg-white p-4 shadow-inner">
+      <h2 class="font-semibold mb-2">Series</h2>
+      <ul id="series-list" class="space-y-1 overflow-y-auto h-64 mb-4"></ul>
+      <button id="add-series" class="w-full bg-blue-500 text-white py-2 rounded shadow">+ Dodaj serię</button>
+      <div class="mt-6">
+        <h3 class="font-semibold mb-1">Kalkulator</h3>
+        <select id="calc-a" class="border rounded w-full mb-2 p-1"></select>
+        <select id="calc-b" class="border rounded w-full mb-2 p-1"></select>
+        <select id="calc-op" class="border rounded w-full mb-2 p-1">
+          <option value="+">A + B</option>
+          <option value="-">A - B</option>
+          <option value="%">% Δ</option>
+          <option value="Δ">Δ abs.</option>
+        </select>
+        <button id="calc-go" class="bg-green-500 text-white w-full py-2 rounded shadow">Oblicz</button>
+      </div>
+    </aside>
+
+    <!-- CHART -->
+    <main class="flex-1 p-4">
+      <div id="chart"></div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+```html
 <!DOCTYPE html>
 <html lang="pl">
 <head>
