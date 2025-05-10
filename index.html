@@ -249,6 +249,11 @@
     <div id="edit-chart-panel" :class="{ open: isEditPanelOpen }">
       <h3>Edytuj wykres</h3>
       <div v-if="selectedSeries.length > 0">
+        <h4>Typ wykresu</h4>
+        <select v-model="chartType">
+          <option value="normal">Zwykły</option>
+          <option value="stacked">Skumulowany</option>
+        </select>
         <h4>Ustawienia serii</h4>
         <div v-for="sel in selectedSeries" :key="sel.id">
           {{ getSeriesName(sel.id) }}
@@ -327,7 +332,8 @@
         isEditPanelOpen: false,
         operation: 'add',
         chartSeries: [],
-        selectedRange: 'all'
+        selectedRange: 'all',
+        chartType: 'normal'
       },
       computed: {
         filteredSeries() {
@@ -391,6 +397,10 @@
           let minDate, maxDate;
           const now = new Date();
           maxDate = now.getTime();
+          const allDates = this.seriesData.flatMap(s => s.data.map(d => new Date(d.date).getTime()));
+          const dataMinDate = Math.min(...allDates);
+          const dataMaxDate = Math.max(...allDates);
+
           if (this.selectedRange === '1') {
             minDate = new Date(now.setFullYear(now.getFullYear() - 1)).getTime();
           } else if (this.selectedRange === '5') {
@@ -398,12 +408,21 @@
           } else if (this.selectedRange === '10') {
             minDate = new Date(now.setFullYear(now.getFullYear() - 10)).getTime();
           } else {
-            minDate = Math.min(...this.seriesData.flatMap(s => s.data.map(d => new Date(d.date).getTime())));
+            minDate = dataMinDate;
+            maxDate = dataMaxDate;
           }
+
+          // Ensure minDate is not before the earliest data point
+          minDate = Math.max(minDate, dataMinDate);
+
           this.chart.updateOptions({
             xaxis: {
               min: minDate,
-              max: maxDate
+              max: maxDate,
+              type: 'datetime',
+              labels: {
+                datetimeUTC: false
+              }
             }
           });
         }
@@ -417,14 +436,16 @@
               name: column.column,
               data: column.data.map(d => ({ date: d.date, value: d.value }))
             }));
+            this.updateChartRange(); // Initialize chart range
           })
           .catch(error => console.error('Błąd ładowania danych:', error));
 
         this.chart = new ApexCharts(document.querySelector("#chart"), {
           series: [],
           chart: {
-            type: 'line',
+            type: 'area', // Changed to area for stacking
             height: 500,
+            stacked: false, // Will be toggled based on chartType
             zoom: {
               enabled: true,
               type: 'x',
@@ -439,6 +460,13 @@
           },
           stroke: {
             curve: 'straight'
+          },
+          fill: {
+            type: 'gradient',
+            gradient: {
+              opacityFrom: 0.6,
+              opacityTo: 0.8
+            }
           },
           xaxis: {
             type: 'datetime',
@@ -483,6 +511,13 @@
             this.chart.updateSeries(this.chartSeries);
           },
           deep: true
+        },
+        chartType(newType) {
+          this.chart.updateOptions({
+            chart: {
+              stacked: newType === 'stacked'
+            }
+          });
         }
       }
     });
