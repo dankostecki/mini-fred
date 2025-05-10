@@ -394,27 +394,30 @@
           });
         },
         updateChartRange() {
-          let minDate, maxDate;
-          const now = new Date();
-          maxDate = now.getTime();
+          if (this.seriesData.length === 0) return; // Brak danych
+
+          // Znajdź najwcześniejszą i najpóźniejszą datę w danych
           const allDates = this.seriesData.flatMap(s => s.data.map(d => new Date(d.date).getTime()));
           const dataMinDate = Math.min(...allDates);
           const dataMaxDate = Math.max(...allDates);
 
-          if (this.selectedRange === '1') {
-            minDate = new Date(now.setFullYear(now.getFullYear() - 1)).getTime();
-          } else if (this.selectedRange === '5') {
-            minDate = new Date(now.setFullYear(now.getFullYear() - 5)).getTime();
-          } else if (this.selectedRange === '10') {
-            minDate = new Date(now.setFullYear(now.getFullYear() - 10)).getTime();
+          let minDate, maxDate = dataMaxDate;
+
+          if (this.selectedRange === 'all') {
+            minDate = dataMinDate; // Cały zakres danych
           } else {
-            minDate = dataMinDate;
-            maxDate = dataMaxDate;
+            const yearsBack = parseInt(this.selectedRange); // 1, 5 lub 10
+            const now = new Date();
+            minDate = new Date(now.setFullYear(now.getFullYear() - yearsBack)).getTime();
+            // Zapewnij, że minDate nie jest wcześniejsza niż najwcześniejsza data w danych
+            minDate = Math.max(minDate, dataMinDate);
           }
 
-          // Ensure minDate is not before the earliest data point
-          minDate = Math.max(minDate, dataMinDate);
+          // Logi diagnostyczne
+          console.log('Selected Range:', this.selectedRange);
+          console.log('minDate:', new Date(minDate), 'maxDate:', new Date(maxDate));
 
+          // Aktualizuj wykres
           this.chart.updateOptions({
             xaxis: {
               min: minDate,
@@ -436,16 +439,16 @@
               name: column.column,
               data: column.data.map(d => ({ date: d.date, value: d.value }))
             }));
-            this.updateChartRange(); // Initialize chart range
+            this.updateChartRange(); // Ustaw początkowy zakres
           })
           .catch(error => console.error('Błąd ładowania danych:', error));
 
         this.chart = new ApexCharts(document.querySelector("#chart"), {
           series: [],
           chart: {
-            type: 'area', // Changed to area for stacking
+            type: 'area',
             height: 500,
-            stacked: false, // Will be toggled based on chartType
+            stacked: false,
             zoom: {
               enabled: true,
               type: 'x',
