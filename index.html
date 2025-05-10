@@ -120,6 +120,9 @@
     #selected-series {
       margin-top: 20px;
     }
+    #selected-series h3 {
+      margin: 0 0 10px 0;
+    }
     #selected-series div {
       background: white;
       padding: 10px;
@@ -129,11 +132,6 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-    #selected-series select {
-      padding: 5px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
     }
     #selected-series button {
       background-color: #e74c3c;
@@ -164,19 +162,23 @@
     #edit-chart-panel.open {
       right: 0;
     }
-    #edit-chart-panel h3 {
+    #edit-chart-panel h3, #edit-chart-panel h4 {
       margin-top: 0;
     }
-    #edit-chart-panel select, #edit-chart-panel button {
+    #edit-chart-panel select {
       width: 100%;
-      padding: 10px;
-      margin: 10px 0;
+      padding: 5px;
+      margin: 5px 0;
       border-radius: 5px;
       border: none;
     }
     #edit-chart-panel button {
       background-color: #2ecc71;
       color: white;
+      border: none;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
       cursor: pointer;
       transition: background-color 0.3s;
     }
@@ -237,6 +239,17 @@
     <div id="main">
       <div id="chart"></div>
       <div id="selected-series">
+        <h3>Wybrane serie</h3>
+        <div v-for="sel in selectedSeries" :key="sel.id">
+          {{ getSeriesName(sel.id) }}
+          <button @click="removeFromChart(sel.id)">Usuń</button>
+        </div>
+      </div>
+    </div>
+    <div id="edit-chart-panel" :class="{ open: isEditPanelOpen }">
+      <h3>Edytuj wykres</h3>
+      <div v-if="selectedSeries.length > 0">
+        <h4>Ustawienia serii</h4>
         <div v-for="sel in selectedSeries" :key="sel.id">
           {{ getSeriesName(sel.id) }}
           <select v-model="sel.transformation">
@@ -246,22 +259,21 @@
             <option value="yoy_abs">Zmiana YoY absolutna</option>
             <option value="yoy_pct">Zmiana YoY %</option>
           </select>
-          <button @click="removeFromChart(sel.id)">Usuń</button>
+        </div>
+        <h4>Operacje na wykresie</h4>
+        <div v-if="selectedSeries.length === 2">
+          <select v-model="operation">
+            <option value="add">Dodawanie (+)</option>
+            <option value="subtract">Odejmowanie (-)</option>
+          </select>
+          <button @click="applyOperation">Zastosuj operację</button>
+        </div>
+        <div v-else>
+          <p>Wybierz dokładnie dwie serie, aby wykonać operację.</p>
         </div>
       </div>
-    </div>
-    <div id="edit-chart-panel" :class="{ open: isEditPanelOpen }">
-      <h3>Edytuj wykres</h3>
-      <div v-if="selectedSeries.length > 0">
-        <select v-model="operation">
-          <option value="add">Dodawanie (+)</option>
-          <option value="subtract">Odejmowanie (-)</option>
-          <option value="percent">Zmiana procentowa</option>
-        </select>
-        <button @click="applyOperation">Zastosuj operację</button>
-      </div>
       <div v-else>
-        <p>Wybierz co najmniej jedną serię, aby wykonać operację.</p>
+        <p>Wybierz serie, aby edytować wykres.</p>
       </div>
     </div>
   </div>
@@ -300,8 +312,6 @@
           newValue = valueA + valueB;
         } else if (operation === 'subtract') {
           newValue = valueA - valueB;
-        } else if (operation === 'percent') {
-          newValue = valueB !== 0 ? ((valueA - valueB) / valueB * 100) : null;
         }
         return { x: d.x, y: newValue };
       });
@@ -349,55 +359,33 @@
           return series ? series.name : '';
         },
         applyOperation() {
-          if (this.operation === 'percent' && this.selectedSeries.length < 1) {
-            alert('Wybierz co najmniej jedną serię dla zmiany procentowej.');
+          if (this.selectedSeries.length !== 2) {
+            alert('Wybierz dokładnie dwie serie do operacji.');
             return;
           }
-          if (['add', 'subtract'].includes(this.operation) && this.selectedSeries.length < 2) {
-            alert('Wybierz co najmniej dwie serie dla operacji dodawania lub odejmowania.');
-            return;
-          }
-          if (this.operation === 'percent') {
-            const series = this.seriesData.find(s => s.id === this.selectedSeries[0].id);
-            const transformedData = applyTransformation(series.data, 'yoy_pct');
-            this.chartSeries = [{
-              name: `${series.name} (Zmiana % YoY)`,
-              data: transformedData.map(d => [d.x, d.y])
-            }];
-            this.chart.updateOptions({
-              yaxis: {
-                labels: {
-                  formatter: function (val) {
-                    return val !== null ? `${val.toFixed(2)}%` : '';
-                  }
-                }
-              }
-            });
-          } else {
-            const seriesA = applyTransformation(
-              this.seriesData.find(s => s.id === this.selectedSeries[0].id).data,
-              this.selectedSeries[0].transformation
-            );
-            const seriesB = applyTransformation(
-              this.seriesData.find(s => s.id === this.selectedSeries[1].id).data,
-              this.selectedSeries[1].transformation
-            );
-            const result = calculateOperation(seriesA, seriesB, this.operation);
-            this.chartSeries = [{
-              name: `Wynik operacji (${this.operation})`,
-              data: result.map(d => [d.x, d.y])
-            }];
-            this.chart.updateOptions({
-              yaxis: {
-                labels: {
-                  formatter: function (val) {
-                    return val !== null ? val.toFixed(2) : '';
-                  }
-                }
-              }
-            });
-          }
+          const seriesA = applyTransformation(
+            this.seriesData.find(s => s.id === this.selectedSeries[0].id).data,
+            this.selectedSeries[0].transformation
+          );
+          const seriesB = applyTransformation(
+            this.seriesData.find(s => s.id === this.selectedSeries[1].id).data,
+            this.selectedSeries[1].transformation
+          );
+          const result = calculateOperation(seriesA, seriesB, this.operation);
+          this.chartSeries = [{
+            name: `Wynik operacji (${this.operation})`,
+            data: result.map(d => [d.x, d.y])
+          }];
           this.chart.updateSeries(this.chartSeries);
+          this.chart.updateOptions({
+            yaxis: {
+              labels: {
+                formatter: function (val) {
+                  return val !== null ? val.toFixed(2) : '';
+                }
+              }
+            }
+          });
         },
         updateChartRange() {
           let minDate, maxDate;
@@ -493,15 +481,6 @@
               };
             });
             this.chart.updateSeries(this.chartSeries);
-            this.chart.updateOptions({
-              yaxis: {
-                labels: {
-                  formatter: function (val) {
-                    return val !== null ? val.toFixed(2) : '';
-                  }
-                }
-              }
-            });
           },
           deep: true
         }
