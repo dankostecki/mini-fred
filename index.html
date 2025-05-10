@@ -333,7 +333,8 @@
         operation: 'add',
         chartSeries: [],
         selectedRange: 'all',
-        chartType: 'normal'
+        chartType: 'normal',
+        dataLoaded: false
       },
       computed: {
         filteredSeries() {
@@ -394,21 +395,24 @@
           });
         },
         updateChartRange() {
-          if (this.seriesData.length === 0) return; // Brak danych
+          if (!this.dataLoaded || this.seriesData.length === 0) {
+            console.log('Dane nie załadowane, pomijam aktualizację zakresu');
+            return;
+          }
 
           // Znajdź najwcześniejszą i najpóźniejszą datę w danych
           const allDates = this.seriesData.flatMap(s => s.data.map(d => new Date(d.date).getTime()));
           const dataMinDate = Math.min(...allDates);
           const dataMaxDate = Math.max(...allDates);
+          const currentDate = new Date().getTime(); // Bieżąca data
 
-          let minDate, maxDate = dataMaxDate;
+          let minDate, maxDate = Math.max(dataMaxDate, currentDate);
 
           if (this.selectedRange === 'all') {
             minDate = dataMinDate; // Cały zakres danych
           } else {
             const yearsBack = parseInt(this.selectedRange); // 1, 5 lub 10
-            const now = new Date();
-            minDate = new Date(now.setFullYear(now.getFullYear() - yearsBack)).getTime();
+            minDate = new Date().setFullYear(new Date().getFullYear() - yearsBack);
             // Zapewnij, że minDate nie jest wcześniejsza niż najwcześniejsza data w danych
             minDate = Math.max(minDate, dataMinDate);
           }
@@ -416,6 +420,7 @@
           // Logi diagnostyczne
           console.log('Selected Range:', this.selectedRange);
           console.log('minDate:', new Date(minDate), 'maxDate:', new Date(maxDate));
+          console.log('dataMinDate:', new Date(data słupek minDate), 'dataMaxDate:', new Date(dataMaxDate));
 
           // Aktualizuj wykres
           this.chart.updateOptions({
@@ -439,7 +444,10 @@
               name: column.column,
               data: column.data.map(d => ({ date: d.date, value: d.value }))
             }));
-            this.updateChartRange(); // Ustaw początkowy zakres
+            this.dataLoaded = true;
+            this.$nextTick(() => {
+              this.updateChartRange(); // Ustaw początkowy zakres po załadowaniu danych
+            });
           })
           .catch(error => console.error('Błąd ładowania danych:', error));
 
