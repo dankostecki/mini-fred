@@ -2,352 +2,313 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mini-FRED</title>
-  <!-- Tailwind CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
-  <!-- ApexCharts -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serwis Danych Ekonomicznych</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+    }
+    #burger {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: -300px;
+      width: 300px;
+      height: 100%;
+      background: #f4f4f4;
+      transition: left 0.3s;
+      padding: 20px;
+      box-sizing: border-box;
+      z-index: 999;
+    }
+    #sidebar.open {
+      left: 0;
+    }
+    #sidebar input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+    #sidebar ul {
+      list-style: none;
+      padding: 0;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    #sidebar li {
+      padding: 5px 0;
+    }
+    #main {
+      margin-left: 50px;
+      padding: 20px;
+      flex-grow: 1;
+    }
+    #chart {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    #selected-series div {
+      margin: 10px 0;
+    }
+    #create-series-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border: 1px solid #ccc;
+      z-index: 1000;
+      display: none;
+    }
+    #create-series-modal.open {
+      display: block;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    select {
+      padding: 5px;
+    }
+    @media (max-width: 768px) {
+      #main {
+        margin-left: 0;
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
-  <!-- HEADER -->
-  <header class="flex items-center justify-between p-4 bg-white shadow-md">
-    <button id="burger" class="md:hidden">☰</button>
-    <h1 class="text-xl font-semibold">Mini-FRED</h1>
-    <input id="search" type="text" placeholder="Szukaj serii..." class="border rounded px-2 py-1 w-1/3" />
-  </header>
-
-  <!-- TOOLBAR -->
-  <div id="toolbar" class="p-4 bg-gray-100 flex flex-wrap items-center gap-2">
-    <span class="font-semibold">Zakres:</span>
-    <button data-range="1" class="range-btn px-2 py-1 bg-white rounded shadow">1M</button>
-    <button data-range="3" class="range-btn px-2 py-1 bg-white rounded shadow">3M</button>
-    <button data-range="6" class="range-btn px-2 py-1 bg-white rounded shadow">6M</button>
-    <button data-range="12" class="range-btn px-2 py-1 bg-white rounded shadow">1Y</button>
-    <button data-range="60" class="range-btn px-2 py-1 bg-white rounded shadow">5Y</button>
-    <button data-range="120" class="range-btn px-2 py-1 bg-white rounded shadow">10Y</button>
-    <button data-range="0" class="range-btn px-2 py-1 bg-white rounded shadow">All</button>
-
-    <input id="date-from" type="date" class="border rounded px-2 py-1" />
-    <input id="date-to" type="date" class="border rounded px-2 py-1" />
-    <button id="range-apply" class="px-2 py-1 bg-indigo-500 text-white rounded shadow">Apply</button>
-
-    <label class="flex items-center space-x-1 ml-4">
-      <input id="toggle-log" type="checkbox" />
-      <span>Log Y</span>
-    </label>
-
-    <span class="font-semibold ml-4">MA:</span>
-    <select id="ma-period" class="border rounded px-2 py-1">
-      <option value="0">None</option>
-      <option value="7">7</option>
-      <option value="30">30</option>
-      <option value="90">90</option>
-    </select>
-    <button id="add-ma" class="px-2 py-1 bg-green-500 text-white rounded shadow">Add MA</button>
-
-    <button id="export-img" class="px-2 py-1 bg-gray-800 text-white rounded shadow ml-auto">Download PNG</button>
-    <button id="export-csv" class="px-2 py-1 bg-gray-800 text-white rounded shadow">Export CSV</button>
-  </div>
-
-  <!-- MAIN LAYOUT -->
-  <div class="flex min-h-[calc(100vh-4rem)]">
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="hidden md:block w-64 bg-white p-4 shadow-inner">
-      <h2 class="font-semibold mb-2">Series</h2>
-      <ul id="series-list" class="space-y-1 overflow-y-auto h-64 mb-4"></ul>
-      <button id="add-series" class="w-full bg-blue-500 text-white py-2 rounded shadow">+ Dodaj serię</button>
-      <div class="mt-6">
-        <h3 class="font-semibold mb-1">Kalkulator</h3>
-        <select id="calc-a" class="border rounded w-full mb-2 p-1"></select>
-        <select id="calc-b" class="border rounded w-full mb-2 p-1"></select>
-        <select id="calc-op" class="border rounded w-full mb-2 p-1">
-          <option value="+">A + B</option>
-          <option value="-">A - B</option>
-          <option value="%">% Δ</option>
-          <option value="Δ">Δ abs.</option>
-        </select>
-        <button id="calc-go" class="bg-green-500 text-white w-full py-2 rounded shadow">Oblicz</button>
+<body>
+  <div id="app">
+    <button id="burger" @click="toggleSidebar">☰</button>
+    <div id="sidebar" :class="{ open: isSidebarOpen }">
+      <input type="text" v-model="searchTerm" placeholder="Wyszukaj serie">
+      <ul>
+        <li v-for="series in filteredSeries" :key="series.id">
+          {{ series.name }} <button @click="addToChart(series.id)">Dodaj</button>
+        </li>
+      </ul>
+      <button @click="openCreateSeriesModal">Utwórz nową serię</button>
+    </div>
+    <div id="main">
+      <div id="chart"></div>
+      <div id="selected-series">
+        <div v-for="sel in selectedSeries" :key="sel.id">
+          {{ getSeriesName(sel.id) }}
+          <select v-model="sel.transformation">
+            <option value="raw">Surowe</option>
+            <option value="mom_abs">Zmiana MoM absolutna</option>
+            <option value="mom_pct">Zmiana MoM %</option>
+            <option value="yoy_abs">Zmiana YoY absolutna</option>
+            <option value="yoy_pct">Zmiana YoY %</option>
+          </select>
+          <button @click="removeFromChart(sel.id)">Usuń</button>
+        </div>
       </div>
-    </aside>
-
-    <!-- CHART -->
-    <main class="flex-1 p-4">
-      <div id="chart"></div>
-    </main>
+    </div>
+    <div id="create-series-modal" :class="{ open: isCreateModalOpen }">
+      <h3>Utwórz nową serię</h3>
+      <select v-model="createSeries.seriesA" multiple size="5">
+        <option v-for="series in seriesData" :value="series.id" :key="series.id">{{ series.name }}</option>
+      </select>
+      <select v-model="createSeries.operation">
+        <option value="add">Dodawanie (+)</option>
+        <option value="subtract">Odejmowanie (-)</option>
+      </select>
+      <select v-model="createSeries.seriesB" multiple size="5">
+        <option v-for="series in seriesData" :value="series.id" :key="series.id">{{ series.name }}</option>
+      </select>
+      <input v-model="createSeries.name" placeholder="Nazwa nowej serii">
+      <button @click="createNewSeries">Utwórz</button>
+      <button @click="isCreateModalOpen = false">Zamknij</button>
+    </div>
   </div>
 
-  <script src="app.js"></script>
-</body>
-</html>
-```html
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mini-FRED</title>
-  <!-- Tailwind CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
-  <!-- ApexCharts -->
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-</head>
-<body class="bg-gray-50 text-gray-800">
-  <!-- HEADER -->
-  <header class="flex items-center justify-between p-4 bg-white shadow-md">
-    <button id="burger" class="md:hidden">☰</button>
-    <h1 class="text-xl font-semibold">Mini-FRED</h1>
-    <input id="search" type="text" placeholder="Szukaj serii..." class="border rounded px-2 py-1 w-1/3" />
-  </header>
+  <script>
+    function applyTransformation(seriesData, transformation) {
+      const result = seriesData.map((d, i) => {
+        const timestamp = new Date(d.date).getTime();
+        if (transformation === 'raw') {
+          return { x: timestamp, y: d.value };
+        } else if (transformation === 'mom_abs') {
+          if (i === 0) return { x: timestamp, y: null };
+          return { x: timestamp, y: d.value - seriesData[i - 1].value };
+        } else if (transformation === 'mom_pct') {
+          if (i === 0) return { x: timestamp, y: null };
+          const prev = seriesData[i - 1].value;
+          return { x: timestamp, y: (d.value - prev) / prev * 100 };
+        } else if (transformation === 'yoy_abs') {
+          if (i < 12) return { x: timestamp, y: null };
+          return { x: timestamp, y: d.value - seriesData[i - 12].value };
+        } else if (transformation === 'yoy_pct') {
+          if (i < 12) return { x: timestamp, y: null };
+          const prevYear = seriesData[i - 12].value;
+          return { x: timestamp, y: (d.value - prevYear) / prevYear * 100 };
+        }
+      });
+      return result;
+    }
 
-  <!-- TOOLBAR -->
-  <div id="toolbar" class="p-4 bg-gray-100 flex flex-wrap items-center gap-2">
-    <span class="font-semibold">Zakres:</span>
-    <button data-range="1" class="range-btn px-2 py-1 bg-white rounded shadow">1M</button>
-    <button data-range="3" class="range-btn px-2 py-1 bg-white rounded shadow">3M</button>
-    <button data-range="6" class="range-btn px-2 py-1 bg-white rounded shadow">6M</button>
-    <button data-range="12" class="range-btn px-2 py-1 bg-white rounded shadow">1Y</button>
-    <button data-range="60" class="range-btn px-2 py-1 bg-white rounded shadow">5Y</button>
-    <button data-range="120" class="range-btn px-2 py-1 bg-white rounded shadow">10Y</button>
-    <button data-range="0" class="range-btn px-2 py-1 bg-white rounded shadow">All</button>
-    <input id="date-from" type="date" class="border rounded px-2 py-1" />
-    <input id="date-to" type="date" class="border rounded px-2 py-1" />
-    <button id="range-apply" class="px-2 py-1 bg-indigo-500 text-white rounded shadow">Apply</button>
-    <label class="flex items-center space-x-1 ml-4">
-      <input id="toggle-log" type="checkbox" />
-      <span>Log Y</span>
-    </label>
-    <span class="font-semibold ml-4">MA:</span>
-    <select id="ma-period" class="border rounded px-2 py-1">
-      <option value="0">None</option>
-      <option value="7">7</option>
-      <option value="30">30</option>
-      <option value="90">90</option>
-    </select>
-    <button id="add-ma" class="px-2 py-1 bg-green-500 text-white rounded shadow">Add MA</button>
-    <button id="export-img" class="px-2 py-1 bg-gray-800 text-white rounded shadow ml-auto">Download PNG</button>
-    <button id="export-csv" class="px-2 py-1 bg-gray-800 text-white rounded shadow">Export CSV</button>
-  </div>
+    new Vue({
+      el: '#app',
+      data: {
+        seriesData: [],
+        selectedSeries: [],
+        searchTerm: '',
+        isSidebarOpen: false,
+        isCreateModalOpen: false,
+        nextId: 1,
+        createSeries: {
+          seriesA: [],
+          seriesB: [],
+          operation: 'add',
+          name: ''
+        }
+      },
+      computed: {
+        filteredSeries() {
+          return this.seriesData.filter(s => 
+            s.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+          );
+        }
+      },
+      methods: {
+        toggleSidebar() {
+          this.isSidebarOpen = !this.isSidebarOpen;
+        },
+        addToChart(id) {
+          if (!this.selectedSeries.find(s => s.id === id)) {
+            this.selectedSeries.push({ id, transformation: 'raw' });
+          }
+        },
+        removeFromChart(id) {
+          this.selectedSeries = this.selectedSeries.filter(s => s.id !== id);
+        },
+        getSeriesName(id) {
+          const series = this.seriesData.find(s => s.id === id);
+          return series ? series.name : '';
+        },
+        openCreateSeriesModal() {
+          this.isCreateModalOpen = true;
+          this.createSeries.seriesA = [];
+          this.createSeries.seriesB = [];
+          this.createSeries.operation = 'add';
+          this.createSeries.name = '';
+        },
+        createNewSeries() {
+          if (this.createSeries.seriesA.length !== 1 || this.createSeries.seriesB.length !== 1) {
+            alert('Wybierz dokładnie jedną serię dla każdej operacji.');
+            return;
+          }
+          if (!this.createSeries.name) {
+            alert('Podaj nazwę nowej serii.');
+            return;
+          }
+          const seriesA = this.seriesData.find(s => s.id === this.createSeries.seriesA[0]);
+          const seriesB = this.seriesData.find(s => s.id === this.createSeries.seriesB[0]);
+          const newData = seriesA.data.map((d, i) => {
+            const valueA = d.value;
+            const valueB = seriesB.data[i].value;
+            const newValue = this.createSeries.operation === 'add' ? valueA + valueB : valueA - valueB;
+            return { date: d.date, value: newValue };
+          });
+          const newSeries = {
+            id: this.nextId++,
+            name: this.createSeries.name,
+            data: newData
+          };
+          this.seriesData.push(newSeries);
+          this.isCreateModalOpen = false;
+        }
+      },
+      mounted() {
+        fetch('am_data.json')
+          .then(response => response.json())
+          .then(data => {
+            this.seriesData = data.columns.map(column => ({
+              id: column.column_id,
+              name: column.column,
+              data: column.data.map(d => ({ date: d.date, value: d.value }))
+            }));
+            this.nextId = Math.max(...this.seriesData.map(s => s.id)) + 1;
+          })
+          .catch(error => console.error('Błąd ładowania danych:', error));
 
-  <!-- MAIN LAYOUT -->
-  <div class="flex min-h-[calc(100vh-4rem)]">
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="hidden md:block w-64 bg-white p-4 shadow-inner">
-      <h2 class="font-semibold mb-2">Series</h2>
-      <ul id="series-list" class="space-y-1 overflow-y-auto h-64 mb-4"></ul>
-      <button id="add-series" class="w-full bg-blue-500 text-white py-2 rounded shadow">+ Dodaj serię</button>
-      <div class="mt-6">
-        <h3 class="font-semibold mb-1">Kalkulator</h3>
-        <select id="calc-a" class="border rounded w-full mb-2 p-1"></select>
-        <select id="calc-b" class="border rounded w-full mb-2 p-1"></select>
-        <select id="calc-op" class="border rounded w-full mb-2 p-1">
-          <option value="+">A + B</option>
-          <option value="-">A - B</option>
-          <option value="%">% Δ</option>
-          <option value="Δ">Δ abs.</option>
-        </select>
-        <button id="calc-go" class="bg-green-500 text-white w-full py-2 rounded shadow">Oblicz</button>
-      </div>
-    </aside>
-
-    <!-- CHART -->
-    <main class="flex-1 p-4">
-      <div id="chart"></div>
-    </main>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>
-```html
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mini-FRED</title>
-  <!-- Tailwind CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
-  <!-- ApexCharts -->
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-</head>
-<body class="bg-gray-50 text-gray-800">
-  <header class="flex items-center justify-between p-4 bg-white shadow-md">
-    <button id="burger" class="md:hidden">☰</button>
-    <h1 class="text-xl font-semibold">Mini-FRED</h1>
-    <input id="search" type="text" placeholder="Szukaj serii..." class="border rounded px-2 py-1 w-1/3" />
-  </header>
-
-  <div id="toolbar" class="p-4 bg-gray-100 flex flex-wrap items-center space-x-2">
-    <span class="font-semibold">Zakres:</span>
-    <button data-range="1" class="range-btn px-2 py-1 bg-white rounded shadow">1M</button>
-    <button data-range="3" class="range-btn px-2 py-1 bg-white rounded shadow">3M</button>
-    <button data-range="6" class="range-btn px-2 py-1 bg-white rounded shadow">6M</button>
-    <button data-range="12" class="range-btn px-2 py-1 bg-white rounded shadow">1Y</button>
-    <button data-range="60" class="range-btn px-2 py-1 bg-white rounded shadow">5Y</button>
-    <button data-range="120" class="range-btn px-2 py-1 bg-white rounded shadow">10Y</button>
-    <button data-range="0" class="range-btn px-2 py-1 bg-white rounded shadow">All</button>
-
-    <input id="date-from" type="date" class="border rounded px-2 py-1" />
-    <input id="date-to" type="date" class="border rounded px-2 py-1" />
-    <button id="range-apply" class="px-2 py-1 bg-indigo-500 text-white rounded shadow">Apply</button>
-
-    <label class="flex items-center space-x-1">
-      <input id="toggle-log" type="checkbox" />
-      <span>Log Y</span>
-    </label>
-
-    <span class="font-semibold">MA:</span>
-    <select id="ma-period" class="border rounded px-2 py-1">
-      <option value="0">None</option>
-      <option value="7">7</option>
-      <option value="30">30</option>
-      <option value="90">90</option>
-    </select>
-    <button id="add-ma" class="px-2 py-1 bg-green-500 text-white rounded shadow">Add MA</button>
-
-    <button id="export-img" class="px-2 py-1 bg-gray-800 text-white rounded shadow">PNG</button>
-    <button id="export-csv" class="px-2 py-1 bg-gray-800 text-white rounded shadow">CSV</button>
-  </div>
-
-  <div class="flex">
-    <!-- Sidebar omitted for brevity; reuse previous code if needed -->
-    <main class="flex-1 p-4">
-      <div id="chart"></div>
-    </main>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>
-````
-
-### app.js
-
-```js
-let rawData;
-let seriesArr = [];
-let chart;
-
-// 1. Fetch data and init
-fetch('am_data.json')
-  .then(r => r.json())
-  .then(json => {
-    rawData = json;
-    seriesArr = prepareSeries(rawData);
-    initChart(seriesArr);
-    setupToolbar();
-    populateSeriesList(seriesArr);
-    setupCalculator(seriesArr);
-  });
-
-// Prepare data
-function prepareSeries(obj) {
-  return Object.entries(obj).map(([key, arr]) => ({
-    name: key,
-    data: arr.map(pt => [new Date(pt.date).getTime(), pt.value]),
-  }));
-}
-
-function initChart(series) {
-  chart = new ApexCharts(document.querySelector('#chart'), {
-    chart: { type: 'line', height: 400, toolbar: { show: false }, zoom: { enabled: true }, animations: { enabled: true } },
-    series,
-    xaxis: { type: 'datetime' },
-    stroke: { curve: 'smooth', width: 2 },
-    legend: { position: 'top', horizontalAlign: 'right' },
-    tooltip: { x: { format: 'yyyy-MM-dd' } },
-    yaxis: { logarithmic: false },
-  });
-  chart.render();
-}
-
-function setupToolbar() {
-  // Preset ranges
-  document.querySelectorAll('.range-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const m = +btn.dataset.range;
-      if (m > 0) {
-        const now = Date.now();
-        const start = now - m * 30 * 24 * 60 * 60 * 1000;
-        chart.zoomX(start, now);
-      } else {
-        chart.resetZoom();
+        this.chart = new ApexCharts(document.querySelector("#chart"), {
+          series: [],
+          chart: {
+            type: 'line',
+            height: 500,
+            zoom: {
+              enabled: true,
+              type: 'x',
+              autoScaleYaxis: true
+            },
+            toolbar: {
+              autoSelected: 'zoom'
+            }
+          },
+          dataLabels: {
+            enabled: false
+          },
+          stroke: {
+            curve: 'straight'
+          },
+          xaxis: {
+            type: 'datetime',
+            labels: {
+              datetimeUTC: false
+            }
+          },
+          tooltip: {
+            x: {
+              format: 'dd MMM yyyy'
+            }
+          },
+          responsive: [{
+            breakpoint: 768,
+            options: {
+              chart: {
+                height: 300
+              }
+            }
+          }]
+        });
+        this.chart.render();
+      },
+      watch: {
+        selectedSeries: {
+          handler() {
+            const chartSeries = this.selectedSeries.map(sel => {
+              const series = this.seriesData.find(s => s.id === sel.id);
+              const transformedData = applyTransformation(series.data, sel.transformation);
+              return {
+                name: `${series.name} (${sel.transformation})`,
+                data: transformedData.map(d => [d.x, d.y])
+              };
+            });
+            this.chart.updateSeries(chartSeries);
+          },
+          deep: true
+        }
       }
     });
-  });
-  // Custom range
-  document.getElementById('range-apply').addEventListener('click', () => {
-    const from = new Date(document.getElementById('date-from').value).getTime();
-    const to = new Date(document.getElementById('date-to').value).getTime();
-    if (!isNaN(from) && !isNaN(to)) chart.zoomX(from, to);
-  });
-  // Log scale toggle
-  document.getElementById('toggle-log').addEventListener('change', e => {
-    chart.updateOptions({ yaxis: { logarithmic: e.target.checked } });
-  });
-  // Add MA overlay
-  document.getElementById('add-ma').addEventListener('click', () => {
-    const p = +document.getElementById('ma-period').value;
-    if (p > 0) {
-      seriesArr.forEach(s => {
-        const ma = computeMA(s.data, p);
-        chart.appendSeries({
-          name: `${s.name} MA${p}`,
-          data: ma,
-          stroke: { width: 2, dashArray: 4 },
-        });
-      });
-    }
-  });
-  // Export PNG
-  document.getElementById('export-img').addEventListener('click', () => {
-    chart.dataURI().then(({ imgURI }) => downloadURI(imgURI, 'chart.png'));
-  });
-  // Export CSV
-  document.getElementById('export-csv').addEventListener('click', downloadCSV);
-}
-
-function computeMA(data, period) {
-  const result = [];
-  for (let i = 0; i < data.length; i++) {
-    const start = Math.max(0, i - period + 1);
-    const slice = data.slice(start, i + 1);
-    const avg = slice.reduce((sum, pt) => sum + pt[1], 0) / slice.length;
-    result.push([data[i][0], parseFloat(avg.toFixed(2))]);
-  }
-  return result;
-}
-
-function downloadURI(uri, name) {
-  const link = document.createElement('a');
-  link.href = uri;
-  link.download = name;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function downloadCSV() {
-  const opts = chart.w.config.series;
-  if (!opts.length) return;
-  // Assume same timestamps
-  const times = opts[0].data.map(pt => pt[0]);
-  let csv = 'Date,' + opts.map(s => s.name).join(',') + '\n';
-  times.forEach((t, i) => {
-    const date = new Date(t).toISOString().split('T')[0];
-    const row = [date];
-    opts.forEach(s => {
-      const pt = s.data.find(p => p[0] === t);
-      row.push(pt ? p[1] : '');
-    });
-    csv += row.join(',') + '\n';
-  });
-  const blob = new Blob([csv], { type: 'text/csv' });
-  downloadURI(URL.createObjectURL(blob), 'data.csv');
-}
-
-// ... (reuse sidebar & calculator code from previous version)
-
-```
+  </script>
+</body>
+</html>
