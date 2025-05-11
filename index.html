@@ -3,136 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini-FRED: Agregaty Monetarne - Wizualizacja</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css" />
+    <title>Wizualizacja danych ekonomicznych</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.42.0/apexcharts.min.js"></script>
     <style>
         body {
-            padding-top: 50px;
-            padding-bottom: 50px;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
-        .hero-section {
-            background-color: #f8f9fa;
-            padding: 80px 0;
-            margin-bottom: 40px;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        .feature-card {
-            height: 100%;
-            transition: transform 0.3s ease;
+        h1 {
+            text-align: center;
+            color: #333;
         }
-        .feature-card:hover {
-            transform: translateY(-5px);
+        .chart-container {
+            height: 500px;
+            margin-top: 20px;
         }
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            color: #0d6efd;
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .cta-section {
-            background-color: #e9ecef;
-            padding: 60px 0;
-            margin-top: 40px;
+        select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .time-range label {
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <!-- Nagłówek -->
-    <header class="bg-primary text-white py-3 fixed-top">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h4 mb-0">Mini-FRED</h1>
-                <a href="visualization.html" class="btn btn-outline-light btn-sm">Przejdź do wizualizacji</a>
+    <div class="container">
+        <h1>Wizualizacja danych ekonomicznych</h1>
+        
+        <div class="loading" id="loading">Ładowanie danych...</div>
+        
+        <div class="controls" id="controls" style="display: none;">
+            <div>
+                <label for="column-select">Wybierz wskaźnik:</label>
+                <select id="column-select"></select>
+            </div>
+            
+            <div class="time-range">
+                <label for="start-date">Od:</label>
+                <input type="date" id="start-date">
+                
+                <label for="end-date">Do:</label>
+                <input type="date" id="end-date">
+                
+                <button id="update-chart">Aktualizuj wykres</button>
             </div>
         </div>
-    </header>
-
-    <!-- Sekcja główna -->
-    <main>
-        <!-- Hero section -->
-        <section class="hero-section">
-            <div class="container text-center">
-                <h1 class="display-4">Agregaty Monetarne</h1>
-                <p class="lead mb-4">Interaktywna wizualizacja danych monetarnych dla Polski</p>
-                <a href="visualization.html" class="btn btn-primary btn-lg">Rozpocznij analizę</a>
-            </div>
-
-            <div class="row g-4 mt-3">
-                <div class="col-md-4">
-                    <div class="card feature-card">
-                        <div class="card-body text-center">
-                            <div class="feature-icon">⏱️</div>
-                            <h3 class="h5">Filtry czasowe</h3>
-                            <p>Wybierz różne zakresy czasowe do analizy - od roku do pełnej historii danych.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card feature-card">
-                        <div class="card-body text-center">
-                            <div class="feature-icon">💾</div>
-                            <h3 class="h5">Eksport danych</h3>
-                            <p>Pobierz wykresy jako obrazy lub dane w formacie CSV do dalszej analizy.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card feature-card">
-                        <div class="card-body text-center">
-                            <div class="feature-icon">🔄</div>
-                            <h3 class="h5">Wartości absolutne i procentowe</h3>
-                            <p>Przełączaj między wartościami bezwzględnymi a zmianami procentowymi.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Opis danych -->
-        <section class="container mb-5">
-            <h2 class="text-center mb-4">O agregacie monetarnym M3</h2>
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <div class="card">
-                        <div class="card-body">
-                            <p>Agregat monetarny M3 to najszerszy miernik podaży pieniądza, obejmujący:</p>
-                            <ul>
-                                <li><strong>Pieniądz M1</strong> - gotówka w obiegu i depozyty na żądanie</li>
-                                <li><strong>Pieniądz M2</strong> - M1 plus depozyty terminowe do 2 lat i depozyty z okresem wypowiedzenia do 3 miesięcy</li>
-                                <li><strong>Operacje z przyrzeczeniem odkupu</strong></li>
-                                <li><strong>Dłużne papiery wartościowe do 2 lat</strong></li>
-                                <li><strong>Udziały w funduszach rynku pieniężnego</strong></li>
-                            </ul>
-                            <p class="mb-0">Agregaty monetarne są ważnymi wskaźnikami ekonomicznymi używanymi przez banki centralne do monitorowania i prognozowania inflacji oraz kształtowania polityki pieniężnej.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
         
-        <!-- Call to Action -->
-        <section class="cta-section">
-            <div class="container text-center">
-                <h2 class="mb-4">Rozpocznij analizę danych</h2>
-                <p class="lead mb-4">Odkryj trendy i zależności w danych monetarnych</p>
-                <a href="visualization.html" class="btn btn-primary btn-lg">Przejdź do wizualizacji</a>
-            </div>
-        </section>
+        <div class="chart-container" id="chart"></div>
+    </div>
 
-        <!-- Funkcjonalności -->
-        <section class="container mb-5">
-            <h2 class="text-center mb-4">Funkcjonalności</h2>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card feature-card">
-                        <div class="card-body text-center">
-                            <div class="feature-icon">📊</div>
-                            <h3 class="h5">Interaktywne wykresy</h3>
-                            <p>Wybieraj spośród różnych typów wykresów i dostosuj je do swoich potrzeb.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card feature-card">
-                        <div class="card-body text-center">
-                            <div class="feature-icon">🔍</div>
-                            <h3 class="h5">Hierarchiczny wybór danych</h3>
-                            <p>Używaj drzewa kategorii, aby szybko znaleźć i wybrać interesujące Cię dane monetarne.</p>
+    <script>
+        // URL do surowych danych JSON
+        const jsonUrl = 'https://raw.githubusercontent.com/dankostecki/mini-fred/main/am_data.json';
+        
+        // Główna funkcja inicjalizująca
+        async function initialize() {
+            try {
+                // Pobierz dane
+                const data = await fetchData(jsonUrl);
+                
+                if (!data || !data.columns || data.columns.length === 0) {
+                    displayError('Nie znaleziono poprawnych danych');
+                    return;
+                }
+                
+                // Przygotuj interfejs użytkownika
+                setupUI(data.columns);
+                
+                // Wyświetl pierwszy dostępny wskaźnik na starcie
+                const firstColumn = data.columns[0];
+                updateChart(firstColumn);
+                
+                // Dodaj obsługę zmiany wskaźnika
+                document.getElementById('column-select').addEventListener('change', function() {
+                    const selectedColumnId = parseInt(this.value);
+                    const selectedColumn = data.columns.find(col => col.column_id === selectedColumnId);
+                    if (selectedColumn) {
+                        updateChart(selectedColumn);
+                    }
+                });
+                
+                // Obsługa przycisku aktualizacji zakresu dat
+                document.getElementById('update-chart').addEventListener('click', function() {
+                    const selectedColumnId = parseInt(document.getElementById('column-select').value);
+                    const selectedColumn = data.columns.find(col => col.column_id === selectedColumnId);
+                    if (selectedColumn) {
+                        updateChart(selectedColumn);
+                    }
+                });
+                
+                // Ukryj komunikat o ładowaniu i pokaż kontrolki
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('controls').style.display = 'flex';
+                
+            } catch (error) {
+                displayError('Wystąpił błąd podczas pobierania danych: ' + error.message);
+            }
+        }
+        
+        // Funkcja pobierająca dane z JSON
+        async function fetchData(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return await response.json();
+        }
+        
+        // Konfiguracja interfejsu użytkownika
+        function setupUI(columns) {
+            const columnSelect = document.getElementById('column-select');
+            
+            // Wypełnij select wskaźnikami
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column.column_id;
+                option.textContent = column.column;
+                columnSelect.appendChild(option);
+            });
+            
+            // Ustaw zakres dat na podstawie dostępnych danych
+            let minDate = null;
+            let maxDate = null;
+            
+            columns.forEach(column => {
+                column.data.forEach(item => {
+                    const date = new Date(item.date);
+                    if (!minDate || date < minDate) minDate = date;
+                    if (!maxDate || date > maxDate) maxDate = date;
+                });
+            });
+            
+            if (minDate && maxDate) {
+                const startDateInput = document.getElementById('start-date');
+                const endDateInput = document.getElementById('end-date');
+                
+                startDateInput.min = minDate.toISOString().split('T')[0];
+                startDateInput.max = maxDate.toISOString().split('T')[0];
+                startDateInput.value = minDate.toISOString().split('T')[0];
+                
+                endDateInput.min = minDate.toISOString().split('T')[0];
+                endDateInput.max = maxDate.toISOString().split('T')[0];
+                endDateInput.value = maxDate.toISOString().split('T')[0];
+            }
+        }
+        
+        // Aktualizacja wykresu dla wybranego wskaźnika
+        function updateChart(column) {
+            // Pobierz zakres dat z kontrolek
+            const startDate = new Date(document.getElementById('start-date').value);
+            const endDate = new Date(document.getElementById('end-date').value);
+            
+            // Filtruj dane według zakresu dat
+            const filteredData = column.data.filter(item => {
+                const itemDate = new Date(item.date);
+                return itemDate >= startDate && itemDate <= endDate;
+            });
+            
+            // Posortuj dane według daty
+            filteredData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Przygotuj dane dla wykresu
+            const seriesData = filteredData.map(item => ({
+                x: new Date(item.date).getTime(),
+                y: item.value
+            }));
+            
+            // Opcje wykresu
+            const options = {
+                series: [{
+                    name: column.column,
+                    data: seriesData
+                }],
+                chart: {
+                    type: 'line',
+                    height: 450,
+                    zoom: {
+                        enabled: true,
+                        type: 'x'
+                    },
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: true,
+                            selection: true,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: true,
+                            reset: true
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 2
+                },
+                title: {
+                    text: column.column,
+                    align: 'left'
+                },
+                grid: {
+                    row: {
+                        colors: ['#f3f3f3', 'transparent'],
+                        opacity: 0.5
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        formatter: function(val) {
+                            return new Date(val).toLocaleDateString('pl-PL', {
+                                year: 'numeric',
+                                month: 'short'
+                            });
+                        }
+                    },
+                    title: {
+                        text: 'Data'
+                    }
+                },
+                yaxis: {
+                    title: {
+                        text: 'Wartość'
+                    },
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(2);
+                        }
+                    }
+                },
+                tooltip: {
+                    x: {
+                        format: 'dd MMM yyyy'
+                    }
+                },
+                legend: {
+                    position: 'top'
+                }
+            };
+            
+            // Wyczyść poprzedni wykres
+            document.getElementById('chart').innerHTML = '';
+            
+            // Utworz nowy wykres
+            const chart = new ApexCharts(document.getElementById('chart'), options);
+            chart.render();
+        }
+        
+        // Wyświetlanie błędów
+        function displayError(message) {
+            document.getElementById('loading').innerHTML = `<div style="color: red">${message}</div>`;
+        }
+        
+        // Inicjalizacja po załadowaniu strony
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
