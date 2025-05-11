@@ -4,334 +4,559 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Podaży Pieniądza w Polsce</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.5/apexcharts.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/pl.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.41.0/apexcharts.min.js"></script>
     <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .navbar {
+            background-color: #1a237e !important;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            background-color: #3949ab;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+        .kpi-card {
+            background: linear-gradient(135deg, #3949ab, #1a237e);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .kpi-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .kpi-title {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .metric-change {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .metric-change.positive {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+        }
+        .metric-change.negative {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+        .chart-container {
+            min-height: 300px;
+            width: 100%;
+        }
+        .data-table {
+            font-size: 14px;
+        }
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
         .loader {
             border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
+            border-top: 5px solid #3949ab;
             border-radius: 50%;
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
+            margin: 100px auto;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        #loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        .data-updated {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #777;
+        }
+        .filter-container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .btn-dashboard {
+            background-color: #3949ab;
+            color: white;
+        }
+        .btn-dashboard:hover {
+            background-color: #1a237e;
+            color: white;
+        }
+        .year-selector, .metric-selector {
+            cursor: pointer;
+        }
+        .tooltip-info {
+            cursor: help;
+            color: #3949ab;
+            margin-left: 5px;
+        }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Dashboard Podaży Pieniądza w Polsce</h1>
-            <p class="text-gray-600">Interaktywna wizualizacja na podstawie rzeczywistych danych NBP</p>
-            <div class="mt-2 text-sm text-gray-500">Źródło: <a href="https://github.com/dankostecki/podazpieniadza" class="text-blue-600 hover:underline" target="_blank">github.com/dankostecki/podazpieniadza</a></div>
-        </header>
+<body>
+    <div id="loading-container">
+        <div class="loader"></div>
+        <p>Ładowanie danych podaży pieniądza...</p>
+    </div>
 
-        <div id="loading" class="text-center py-12">
-            <div class="loader"></div>
-            <p class="mt-4 text-gray-600">Ładowanie danych z API...</p>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">Dashboard Podaży Pieniądza w Polsce</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="nav-link" id="last-update"></span>
+                    </li>
+                </ul>
+            </div>
         </div>
+    </nav>
 
-        <div id="dashboard-content" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <!-- Karta informacyjna -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Aktualne wartości (w mln PLN)</h2>
-                    <div id="current-values" class="grid grid-cols-3 gap-4">
-                        <!-- Dane zostaną wstawione przez JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Karta z filtrowaniem -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Filtry</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Zakres czasowy</label>
-                            <select id="timeRange" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
-                                <option value="1y">Ostatni rok</option>
-                                <option value="5y">Ostatnie 5 lat</option>
-                                <option value="10y">Ostatnie 10 lat</option>
-                                <option value="all">Cały dostępny okres</option>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="filter-container">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Zakres dat</label>
+                            <div class="d-flex">
+                                <select class="form-select me-2" id="start-year">
+                                    <!-- Opcje zostaną dodane przez JavaScript -->
+                                </select>
+                                <select class="form-select" id="end-year">
+                                    <!-- Opcje zostaną dodane przez JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Główne metryki</label>
+                            <select class="form-select" id="metric-selector">
+                                <!-- Opcje zostaną dodane przez JavaScript -->
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Agregaty</label>
-                            <div id="measures-checkboxes" class="space-y-2">
-                                <!-- Checkboxy zostaną wstawione przez JavaScript -->
+                        <div class="col-md-4">
+                            <label class="form-label">Dodatkowe opcje</label>
+                            <div>
+                                <button class="btn btn-dashboard" id="reset-filters">Reset filtrów</button>
+                                <button class="btn btn-dashboard ms-2" id="toggle-table">Pokaż tabelę</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- Wykres liniowy - wartości bezwzględne -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Miary podaży pieniądza (mln PLN)</h2>
-                    <div id="aggregateChart" class="h-80"></div>
-                </div>
-
-                <!-- Wykres słupkowy - zmiany procentowe -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Dynamika zmian r/r (%)</h2>
-                    <div id="growthChart" class="h-80"></div>
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="kpi-card">
+                    <div class="kpi-title">M1 (Aktualne)</div>
+                    <div class="kpi-value" id="kpi-m1-current">...</div>
+                    <div id="kpi-m1-change" class="metric-change">...</div>
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Wykres kołowy - struktura M3 -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Struktura agregatu M3 (ostatni miesiąc)</h2>
-                    <div id="structureChart" class="h-80"></div>
+            <div class="col-md-3">
+                <div class="kpi-card">
+                    <div class="kpi-title">M2 (Aktualne)</div>
+                    <div class="kpi-value" id="kpi-m2-current">...</div>
+                    <div id="kpi-m2-change" class="metric-change">...</div>
                 </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card">
+                    <div class="kpi-title">M3 (Aktualne)</div>
+                    <div class="kpi-value" id="kpi-m3-current">...</div>
+                    <div id="kpi-m3-change" class="metric-change">...</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card">
+                    <div class="kpi-title">Roczna zmiana podaży</div>
+                    <div class="kpi-value" id="kpi-growth-rate">...</div>
+                    <div id="kpi-growth-trend" class="metric-change">...</div>
+                </div>
+            </div>
+        </div>
 
-                <!-- Wykres obszarowy - porównanie agregatów -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Porównanie agregatów</h2>
-                    <div id="comparisonChart" class="h-80"></div>
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Trendy głównych agregatów pieniężnych</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light" id="btn-linear">Liniowy</button>
+                            <button class="btn btn-sm btn-outline-light" id="btn-logarithmic">Logarytmiczny</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="main-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Dynamika zmian r/r</div>
+                    <div class="card-body">
+                        <div id="growth-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Struktura podaży pieniądza</div>
+                    <div class="card-body">
+                        <div id="structure-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card" id="data-table-card" style="display: none;">
+                    <div class="card-header">Dane szczegółowe</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover data-table" id="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <!-- Nagłówki zostaną dodane przez JavaScript -->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dane zostaną dodane przez JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">Analiza pojedynczej metryki w czasie</div>
+                    <div class="card-body">
+                        <div id="single-metric-chart" class="chart-container"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <footer class="bg-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <p class="mb-0">© 2025 Dashboard Podaży Pieniądza w Polsce | <a href="https://dankostecki.github.io/mini-fred/">dankostecki.github.io/mini-fred/</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Główny skrypt do obsługi dashboardu
-        document.addEventListener('DOMContentLoaded', function() {
-            // Ustawienie polskiego locale dla moment.js
-            moment.locale('pl');
-            
-            // Pobieranie danych JSON z GitHub
-            fetch('https://raw.githubusercontent.com/dankostecki/podazpieniadza/main/am_data.json')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Nie udało się pobrać danych');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Ukrycie loadera i pokazanie dashboardu
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('dashboard-content').classList.remove('hidden');
-                    
-                    // Przetworzenie danych
-                    const processedData = processData(data);
-                    
-                    // Inicjalizacja dashboardu
-                    initializeDashboard(processedData);
-                })
-                .catch(error => {
-                    document.getElementById('loading').innerHTML = `
-                        <div class="text-center py-12">
-                            <div class="text-red-600 text-4xl mb-4">⚠️</div>
-                            <h2 class="text-xl font-bold text-red-600 mb-2">Błąd ładowania danych</h2>
-                            <p class="text-gray-600">${error.message}</p>
-                            <button id="retry-button" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Spróbuj ponownie</button>
-                        </div>
-                    `;
-                    document.getElementById('retry-button').addEventListener('click', () => {
-                        location.reload();
-                    });
-                });
-        });
+        // Definicje metryk i ich opisy
+        const metricDefinitions = {
+            'M1': 'Wąski agregat pieniądza obejmujący gotówkę w obiegu oraz depozyty bieżące',
+            'M2': 'Pośredni agregat pieniądza, który zawiera M1 oraz depozyty terminowe do 2 lat i depozyty z okresem wypowiedzenia do 3 miesięcy',
+            'M3': 'Szeroki agregat pieniądza obejmujący M2 oraz instrumenty zbywalne (repurchase agreements, papiery dłużne, akcje/jednostki funduszy rynku pieniężnego)',
+        };
 
-        // Funkcja do przetwarzania surowych danych
-        function processData(rawData) {
-            const result = {
-                dates: [],
-                measures: {},
-                growthRates: {},
-                latestValues: {},
-                latestGrowthRates: {},
-                categories: []
-            };
-            
-            // Sortowanie dat
-            const sortedDates = Object.keys(rawData).sort();
-            result.dates = sortedDates;
-            
-            // Identyfikacja dostępnych miar
-            if (sortedDates.length > 0) {
-                const firstDateData = rawData[sortedDates[0]];
-                result.categories = Object.keys(firstDateData);
-                
-                // Inicjalizacja struktury danych dla każdej miary
-                result.categories.forEach(category => {
-                    result.measures[category] = [];
-                    result.growthRates[category] = [];
-                });
-                
-                // Wypełnienie danych dla wszystkich dat
-                sortedDates.forEach((date, index) => {
-                    const dateData = rawData[date];
-                    
-                    result.categories.forEach(category => {
-                        const value = dateData[category] || 0;
-                        result.measures[category].push(value);
-                        
-                        // Obliczenie dynamiki r/r (w %)
-                        if (index >= 12) {
-                            const prevYearValue = rawData[sortedDates[index - 12]][category] || 0;
-                            const growthRate = prevYearValue > 0 ? (value - prevYearValue) / prevYearValue * 100 : 0;
-                            result.growthRates[category].push(parseFloat(growthRate.toFixed(2)));
-                        } else {
-                            result.growthRates[category].push(null);
-                        }
-                    });
-                });
-                
-                // Ustawienie ostatnich wartości i dynamiki
-                const lastDate = sortedDates[sortedDates.length - 1];
-                const lastDateData = rawData[lastDate];
-                
-                result.categories.forEach(category => {
-                    result.latestValues[category] = lastDateData[category] || 0;
-                    
-                    // Dynamika r/r dla ostatniej wartości
-                    if (sortedDates.length > 12) {
-                        const prevYearDate = sortedDates[sortedDates.length - 13];
-                        const prevYearValue = rawData[prevYearDate][category] || 0;
-                        const growthRate = prevYearValue > 0 ? (result.latestValues[category] - prevYearValue) / prevYearValue * 100 : 0;
-                        result.latestGrowthRates[category] = parseFloat(growthRate.toFixed(2));
-                    } else {
-                        result.latestGrowthRates[category] = 0;
-                    }
-                });
-            }
-            
-            return result;
+        // Główny kontener na dane
+        let monetaryData = null;
+        let mainChart = null;
+        let growthChart = null;
+        let structureChart = null;
+        let singleMetricChart = null;
+        let currentDisplayedMetric = 'M3';
+        let isLogarithmic = false;
+
+        // Kolory dla różnych serii danych
+        const seriesColors = {
+            'M1': '#3498db',
+            'M2': '#2ecc71',
+            'M3': '#9b59b6',
+            'Gotówka w obiegu (poza kasami MIF)': '#e74c3c',
+            'Depozyty bieżące': '#f39c12',
+            'Depozyty terminowe (do 2 lat)': '#1abc9c',
+            'Depozyty z okresem wypowiedzenia (do 3 m-cy)': '#d35400',
+            'Operacje z przyrzeczeniem odkupu': '#8e44ad',
+            'Dłużne papiery wartościowe (do 2 lat)': '#2c3e50',
+            'Akcje/jednostki funduszy rynku pieniężnego': '#16a085'
+        };
+
+        // Format liczb w mld PLN
+        function formatBillions(value) {
+            return (value / 1000).toFixed(2) + ' mld PLN';
         }
 
-        // Funkcja do inicjalizacji całego dashboardu
-        function initializeDashboard(data) {
-            // Formatowanie dat do wyświetlenia
-            const formattedDates = data.dates.map(date => {
-                const [year, month] = date.split('-');
-                return moment(`${year}-${month}-01`).format('MMM YYYY');
-            });
-            
-            // Ustawienie aktualnych wartości
-            updateCurrentValues(data);
-            
-            // Utworzenie checkboxów dla miar
-            createMeasureCheckboxes(data.categories);
-            
-            // Inicjalizacja wykresów
-            const charts = initializeCharts(data, formattedDates);
-            
-            // Obsługa filtrów
-            handleFilters(data, formattedDates, charts);
+        // Format procentowy
+        function formatPercent(value) {
+            return value.toFixed(2) + '%';
         }
 
-        // Funkcja do aktualizacji aktualnych wartości
-        function updateCurrentValues(data) {
-            const currentValuesElement = document.getElementById('current-values');
-            currentValuesElement.innerHTML = '';
-            
-            // Pokazujemy tylko wybrane główne miary (np. M1, M2, M3)
-            const mainMeasures = ['M1', 'M2', 'M3'];
-            
-            mainMeasures.forEach(measure => {
-                if (data.categories.includes(measure)) {
-                    const value = data.latestValues[measure];
-                    const growthRate = data.latestGrowthRates[measure];
-                    const growthClass = growthRate >= 0 ? 'text-green-600' : 'text-red-600';
-                    const growthSign = growthRate >= 0 ? '+' : '';
-                    
-                    const html = `
-                        <div class="bg-${getMeasureColor(measure)}-50 p-4 rounded-lg">
-                            <h3 class="text-sm font-medium text-${getMeasureColor(measure)}-800">${measure}</h3>
-                            <p class="text-2xl font-bold">${formatNumber(value)}</p>
-                            <p class="text-sm ${growthClass}">${growthSign}${growthRate.toFixed(1)}% r/r</p>
-                        </div>
-                    `;
-                    
-                    currentValuesElement.innerHTML += html;
+        // Format daty z obiektu Date
+        function formatDate(date) {
+            const options = { year: 'numeric', month: 'short' };
+            return date.toLocaleString('pl-PL', options);
+        }
+
+        // Funkcja pomocnicza do obliczania zmiany procentowej
+        function calculatePercentChange(current, previous) {
+            if (!previous) return 0;
+            return ((current - previous) / previous) * 100;
+        }
+
+        // Pobranie danych 
+        async function fetchData() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/dankostecki/mini-fred/main/am_data.json');
+                if (!response.ok) {
+                    throw new Error('Problem z pobraniem danych');
                 }
-            });
-        }
-
-        // Funkcja do tworzenia checkboxów dla miar
-        function createMeasureCheckboxes(categories) {
-            const measuresContainer = document.getElementById('measures-checkboxes');
-            measuresContainer.innerHTML = '';
-            
-            // Sortujemy kategorie, M1, M2, M3 na początek, potem reszta alfabetycznie
-            const mainMeasures = ['M1', 'M2', 'M3'];
-            const otherMeasures = categories.filter(cat => !mainMeasures.includes(cat)).sort();
-            const sortedCategories = [...mainMeasures.filter(m => categories.includes(m)), ...otherMeasures];
-            
-            sortedCategories.forEach(category => {
-                const color = getMeasureColor(category);
-                const isMainMeasure = mainMeasures.includes(category);
+                const data = await response.json();
                 
-                const html = `
-                    <div class="flex items-center">
-                        <input type="checkbox" id="check-${category}" class="h-4 w-4 text-${color}-600 focus:ring-${color}-500 border-gray-300 rounded" ${isMainMeasure ? 'checked' : ''}>
-                        <label for="check-${category}" class="ml-2 text-sm text-gray-700">${category}</label>
+                // Przekształć daty na obiekty Date
+                return data.map(item => {
+                    // Parsowanie daty w formacie "YYYY-MM"
+                    const dateParts = item.date.split('-');
+                    const date = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1);
+                    
+                    return {
+                        ...item,
+                        dateObj: date,
+                        formattedDate: formatDate(date)
+                    };
+                }).sort((a, b) => a.dateObj - b.dateObj); // Sortowanie chronologiczne
+            } catch (error) {
+                console.error('Błąd podczas pobierania danych:', error);
+                document.getElementById('loading-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4>Błąd pobierania danych</h4>
+                        <p>${error.message}</p>
+                        <button class="btn btn-danger mt-3" onclick="location.reload()">Spróbuj ponownie</button>
                     </div>
                 `;
+                return null;
+            }
+        }
+
+        // Inicjalizacja dashboardu
+        async function initDashboard() {
+            try {
+                monetaryData = await fetchData();
+                if (!monetaryData) return;
                 
-                measuresContainer.innerHTML += html;
+                // Ukryj loader
+                document.getElementById('loading-container').style.display = 'none';
+                
+                // Inicjalizacja selektorów dat
+                initDateSelectors();
+                
+                // Inicjalizacja selektora metryk
+                initMetricSelector();
+                
+                // Aktualizacja KPI
+                updateKPIs();
+                
+                // Inicjalizacja wykresów
+                initCharts();
+                
+                // Dodaj ostatnią aktualizację
+                const lastDataPoint = monetaryData[monetaryData.length - 1];
+                document.getElementById('last-update').textContent = 
+                    `Ostatnia aktualizacja: ${lastDataPoint.formattedDate}`;
+                
+                // Obsługa przycisków
+                setupEventListeners();
+            } catch (error) {
+                console.error('Błąd inicjalizacji dashboardu:', error);
+                alert('Wystąpił problem z inicjalizacją dashboardu. Spróbuj odświeżyć stronę.');
+            }
+        }
+
+        // Inicjalizacja selektorów dat
+        function initDateSelectors() {
+            const startYear = document.getElementById('start-year');
+            const endYear = document.getElementById('end-year');
+            
+            // Pobierz unikalne lata z danych
+            const years = [...new Set(monetaryData.map(item => item.dateObj.getFullYear()))].sort();
+            
+            // Wypełnij selektory
+            years.forEach(year => {
+                startYear.innerHTML += `<option value="${year}">${year}</option>`;
+                endYear.innerHTML += `<option value="${year}">${year}</option>`;
+            });
+            
+            // Ustaw domyślne wartości (ostatnie 5 lat)
+            startYear.value = years[Math.max(0, years.length - 6)];
+            endYear.value = years[years.length - 1];
+            
+            // Dodaj event listenery
+            startYear.addEventListener('change', updateChartsWithDateRange);
+            endYear.addEventListener('change', updateChartsWithDateRange);
+        }
+
+        // Inicjalizacja selektora metryk
+        function initMetricSelector() {
+            const metricSelector = document.getElementById('metric-selector');
+            
+            // Pobierz wszystkie nazwy metryk (oprócz daty)
+            const metrics = Object.keys(monetaryData[0]).filter(key => key !== 'date' && key !== 'dateObj' && key !== 'formattedDate');
+            
+            // Wypełnij selektor
+            metrics.forEach(metric => {
+                metricSelector.innerHTML += `<option value="${metric}">${metric}</option>`;
+            });
+            
+            // Ustaw domyślną wartość
+            metricSelector.value = 'M3';
+            
+            // Dodaj event listener
+            metricSelector.addEventListener('change', (e) => {
+                currentDisplayedMetric = e.target.value;
+                updateSingleMetricChart();
             });
         }
 
-        // Funkcja do inicjalizacji wszystkich wykresów
-        function initializeCharts(data, formattedDates) {
-            // Struktura dla przechowywania referencji do wykresów
-            const charts = {};
+        // Aktualizacja KPI
+        function updateKPIs() {
+            const latest = monetaryData[monetaryData.length - 1];
+            const previousMonth = monetaryData[monetaryData.length - 2];
+            const previousYear = monetaryData.find(item => 
+                item.dateObj.getMonth() === latest.dateObj.getMonth() && 
+                item.dateObj.getFullYear() === latest.dateObj.getFullYear() - 1);
             
-            // Definiowanie kolorów dla różnych miar
-            const colors = {
-                'M1': '#3b82f6', // blue
-                'M2': '#4f46e5', // indigo
-                'M3': '#7c3aed', // purple
-                'default': '#d946ef' // fuchsia jako domyślny
-            };
+            // Aktualizacja M1
+            document.getElementById('kpi-m1-current').textContent = formatBillions(latest.M1);
+            const m1Change = calculatePercentChange(latest.M1, previousMonth.M1);
+            const m1ChangeEl = document.getElementById('kpi-m1-change');
+            m1ChangeEl.textContent = `${m1Change > 0 ? '+' : ''}${formatPercent(m1Change)} m/m`;
+            m1ChangeEl.className = `metric-change ${m1Change >= 0 ? 'positive' : 'negative'}`;
             
-            // 1. Wykres liniowy - wartości bezwzględne (agregaty)
-            charts.aggregateChart = createAggregateChart(data, formattedDates, colors);
+            // Aktualizacja M2
+            document.getElementById('kpi-m2-current').textContent = formatBillions(latest.M2);
+            const m2Change = calculatePercentChange(latest.M2, previousMonth.M2);
+            const m2ChangeEl = document.getElementById('kpi-m2-change');
+            m2ChangeEl.textContent = `${m2Change > 0 ? '+' : ''}${formatPercent(m2Change)} m/m`;
+            m2ChangeEl.className = `metric-change ${m2Change >= 0 ? 'positive' : 'negative'}`;
             
-            // 2. Wykres słupkowy - dynamika zmian (r/r)
-            charts.growthChart = createGrowthChart(data, formattedDates, colors);
+            // Aktualizacja M3
+            document.getElementById('kpi-m3-current').textContent = formatBillions(latest.M3);
+            const m3Change = calculatePercentChange(latest.M3, previousMonth.M3);
+            const m3ChangeEl = document.getElementById('kpi-m3-change');
+            m3ChangeEl.textContent = `${m3Change > 0 ? '+' : ''}${formatPercent(m3Change)} m/m`;
+            m3ChangeEl.className = `metric-change ${m3Change >= 0 ? 'positive' : 'negative'}`;
             
-            // 3. Wykres kołowy - struktura M3
-            charts.structureChart = createStructureChart(data);
-            
-            // 4. Wykres obszarowy - porównanie agregatów
-            charts.comparisonChart = createComparisonChart(data, formattedDates, colors);
-            
-            return charts;
+            // Aktualizacja rocznej zmiany
+            if (previousYear) {
+                const yearlyChange = calculatePercentChange(latest.M3, previousYear.M3);
+                document.getElementById('kpi-growth-rate').textContent = `${yearlyChange > 0 ? '+' : ''}${formatPercent(yearlyChange)}`;
+                
+                // Tendencja w porównaniu do poprzedniego miesiąca
+                const previousYearlyChange = calculatePercentChange(previousMonth.M3, 
+                    monetaryData.find(item => 
+                        item.dateObj.getMonth() === previousMonth.dateObj.getMonth() && 
+                        item.dateObj.getFullYear() === previousMonth.dateObj.getFullYear() - 1)?.M3 || 0);
+                
+                const growthTrend = yearlyChange - previousYearlyChange;
+                const growthTrendEl = document.getElementById('kpi-growth-trend');
+                growthTrendEl.textContent = `${growthTrend > 0 ? '+' : ''}${formatPercent(growthTrend)}`;
+                growthTrendEl.className = `metric-change ${growthTrend >= 0 ? 'positive' : 'negative'}`;
+            }
         }
 
-        // Funkcja do tworzenia wykresu agregatów
-        function createAggregateChart(data, formattedDates, colors) {
-            const mainMeasures = ['M1', 'M2', 'M3'];
-            const visibleMeasures = mainMeasures.filter(m => data.categories.includes(m));
-            
-            const series = visibleMeasures.map(measure => ({
-                name: measure,
-                data: data.measures[measure]
-            }));
+        // Inicjalizacja wykresów
+        function initCharts() {
+            initMainChart();
+            initGrowthChart();
+            initStructureChart();
+            initSingleMetricChart();
+            updateDataTable();
+        }
+
+        // Inicjalizacja głównego wykresu
+        function initMainChart() {
+            const filteredData = getFilteredData();
             
             const options = {
-                series: series,
-                chart: {
-                    height: 320,
-                    type: 'line',
-                    toolbar: {
-                        show: true
+                series: [
+                    {
+                        name: 'M1',
+                        data: filteredData.map(item => ({ x: item.dateObj.getTime(), y: item.M1 }))
                     },
+                    {
+                        name: 'M2',
+                        data: filteredData.map(item => ({ x: item.dateObj.getTime(), y: item.M2 }))
+                    },
+                    {
+                        name: 'M3',
+                        data: filteredData.map(item => ({ x: item.dateObj.getTime(), y: item.M3 }))
+                    }
+                ],
+                chart: {
+                    height: 400,
+                    type: 'line',
                     zoom: {
                         enabled: true
+                    },
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: true,
+                            selection: true,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: true,
+                            reset: true
+                        }
                     }
                 },
-                colors: visibleMeasures.map(m => colors[m] || colors.default),
+                colors: [seriesColors.M1, seriesColors.M2, seriesColors.M3],
                 dataLabels: {
                     enabled: false
                 },
@@ -339,385 +564,173 @@
                     curve: 'smooth',
                     width: 3
                 },
+                title: {
+                    text: 'Trendy głównych agregatów pieniężnych w Polsce',
+                    align: 'left'
+                },
                 grid: {
-                    borderColor: '#f3f4f6',
+                    borderColor: '#e7e7e7',
                     row: {
-                        colors: ['#f8fafc', 'transparent'],
-                        opacity: 0.2
+                        colors: ['#f3f3f3', 'transparent'],
+                        opacity: 0.5
                     }
                 },
                 markers: {
                     size: 0
                 },
                 xaxis: {
-                    categories: formattedDates,
+                    type: 'datetime',
                     labels: {
-                        rotate: -45,
-                        style: {
-                            fontSize: '10px'
+                        formatter: function(val) {
+                            return new Date(val).toLocaleDateString('pl-PL', { year: 'numeric', month: 'short' });
                         }
                     },
-                    tickAmount: 10
+                    title: {
+                        text: 'Data'
+                    }
                 },
                 yaxis: {
                     title: {
-                        text: 'mln PLN'
+                        text: 'Wartość (mln PLN)'
                     },
                     labels: {
                         formatter: function(val) {
-                            return formatNumber(val);
+                            if (isLogarithmic) {
+                                return (val / 1000).toFixed(2) + ' mld';
+                            } else {
+                                return (val / 1000).toFixed(0) + ' mld';
+                            }
                         }
-                    }
-                },
-                tooltip: {
-                    y: {
-                        formatter: function(val) {
-                            return formatNumber(val) + ' mln PLN';
-                        }
-                    }
+                    },
+                    logarithmic: isLogarithmic
                 },
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    horizontalAlign: 'right',
+                    floating: true,
+                    offsetY: -25,
+                    offsetX: -5
+                },
+                tooltip: {
+                    shared: true,
+                    y: {
+                        formatter: function(val) {
+                            return formatBillions(val);
+                        }
+                    }
                 }
             };
-            
-            const chart = new ApexCharts(document.querySelector("#aggregateChart"), options);
-            chart.render();
-            
-            return chart;
+
+            mainChart = new ApexCharts(document.getElementById('main-chart'), options);
+            mainChart.render();
         }
 
-        // Funkcja do tworzenia wykresu dynamiki zmian
-        function createGrowthChart(data, formattedDates, colors) {
-            const mainMeasures = ['M1', 'M2', 'M3'];
-            const visibleMeasures = mainMeasures.filter(m => data.categories.includes(m));
+        // Inicjalizacja wykresu dynamiki wzrostu
+        function initGrowthChart() {
+            const filteredData = getFilteredData();
             
-            const series = visibleMeasures.map(measure => ({
-                name: measure,
-                data: data.growthRates[measure]
-            }));
+            // Oblicz roczną dynamikę wzrostu
+            const growthData = [];
+            
+            for (let i = 12; i < filteredData.length; i++) {
+                const currentDate = filteredData[i].dateObj;
+                const currentM1 = filteredData[i].M1;
+                const currentM2 = filteredData[i].M2;
+                const currentM3 = filteredData[i].M3;
+                
+                const previousYearData = filteredData[i - 12];
+                const previousM1 = previousYearData.M1;
+                const previousM2 = previousYearData.M2;
+                const previousM3 = previousYearData.M3;
+                
+                growthData.push({
+                    date: currentDate,
+                    M1Growth: calculatePercentChange(currentM1, previousM1),
+                    M2Growth: calculatePercentChange(currentM2, previousM2),
+                    M3Growth: calculatePercentChange(currentM3, previousM3)
+                });
+            }
             
             const options = {
-                series: series,
+                series: [
+                    {
+                        name: 'M1 (r/r)',
+                        data: growthData.map(item => ({ x: item.date.getTime(), y: item.M1Growth }))
+                    },
+                    {
+                        name: 'M2 (r/r)',
+                        data: growthData.map(item => ({ x: item.date.getTime(), y: item.M2Growth }))
+                    },
+                    {
+                        name: 'M3 (r/r)',
+                        data: growthData.map(item => ({ x: item.date.getTime(), y: item.M3Growth }))
+                    }
+                ],
                 chart: {
-                    type: 'bar',
-                    height: 320,
-                    toolbar: {
-                        show: true
+                    height: 350,
+                    type: 'line',
+                    zoom: {
+                        enabled: true
                     }
                 },
-                colors: visibleMeasures.map(m => colors[m] || colors.default),
-                plotOptions: {
-                    bar: {
-                        horizontal: false,
-                        columnWidth: '80%',
-                        borderRadius: 4
-                    }
-                },
+                colors: [seriesColors.M1, seriesColors.M2, seriesColors.M3],
                 dataLabels: {
                     enabled: false
                 },
+                stroke: {
+                    curve: 'smooth',
+                    width: 2
+                },
+                title: {
+                    text: 'Dynamika zmian podaży pieniądza r/r',
+                    align: 'left'
+                },
+                grid: {
+                    borderColor: '#e7e7e7'
+                },
+                markers: {
+                    size: 0
+                },
                 xaxis: {
-                    categories: formattedDates,
+                    type: 'datetime',
                     labels: {
-                        rotate: -45,
-                        style: {
-                            fontSize: '10px'
+                        formatter: function(val) {
+                            return new Date(val).toLocaleDateString('pl-PL', { year: 'numeric', month: 'short' });
                         }
-                    },
-                    tickAmount: 10
+                    }
                 },
                 yaxis: {
                     title: {
                         text: 'Zmiana r/r (%)'
-                    }
-                },
-                tooltip: {
-                    y: {
+                    },
+                    labels: {
                         formatter: function(val) {
                             return val.toFixed(1) + '%';
                         }
                     }
                 },
                 legend: {
-                    position: 'top'
-                }
-            };
-            
-            const chart = new ApexCharts(document.querySelector("#growthChart"), options);
-            chart.render();
-            
-            return chart;
-        }
-
-        // Funkcja do tworzenia wykresu struktury M3
-        function createStructureChart(data) {
-            // Komponenty M3 (przykładowo)
-            const m3Components = {
-                'Gotówka w obiegu': 'M0',
-                'Depozyty bieżące gospodarstw domowych': 'Depozyty_biezace_gospodarstw_domowych',
-                'Depozyty bieżące przedsiębiorstw': 'Depozyty_biezace_przedsiebiorstw',
-                'Depozyty terminowe': 'Depozyty_terminowe'
-            };
-            
-            // Weryfikacja dostępnych danych
-            const availableComponents = Object.entries(m3Components).filter(
-                ([name, key]) => data.categories.includes(key)
-            );
-            
-            // Przygotowanie danych do wykresu
-            const series = availableComponents.map(([name, key]) => data.latestValues[key]);
-            const labels = availableComponents.map(([name, _]) => name);
-            
-            const options = {
-                series: series,
-                chart: {
-                    height: 320,
-                    type: 'pie'
-                },
-                labels: labels,
-                colors: ['#3b82f6', '#4f46e5', '#7c3aed', '#8b5cf6', '#a855f7'],
-                legend: {
-                    position: 'bottom'
-                },
-                responsive: [{
-                    breakpoint: 480,
-                    options: {
-                        chart: {
-                            width: 300
-                        },
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }],
-                tooltip: {
-                    y: {
-                        formatter: function(val) {
-                            return formatNumber(val) + ' mln PLN';
-                        }
-                    }
-                }
-            };
-            
-            const chart = new ApexCharts(document.querySelector("#structureChart"), options);
-            chart.render();
-            
-            return chart;
-        }
-
-        // Funkcja do tworzenia wykresu porównawczego
-        function createComparisonChart(data, formattedDates, colors) {
-            const mainMeasures = ['M1', 'M2', 'M3'];
-            const visibleMeasures = mainMeasures.filter(m => data.categories.includes(m));
-            
-            const series = visibleMeasures.map(measure => ({
-                name: measure,
-                data: data.measures[measure]
-            }));
-            
-            const options = {
-                series: series,
-                chart: {
-                    type: 'area',
-                    height: 320,
-                    stacked: false,
-                    toolbar: {
-                        show: true
-                    }
-                },
-                colors: visibleMeasures.map(m => colors[m] || colors.default),
-                dataLabels: {
-                    enabled: false
-                },
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        opacityFrom: 0.6,
-                        opacityTo: 0.1
-                    }
-                },
-                xaxis: {
-                    categories: formattedDates,
-                    labels: {
-                        rotate: -45,
-                        style: {
-                            fontSize: '10px'
-                        }
-                    },
-                    tickAmount: 10
-                },
-                yaxis: {
-                    title: {
-                        text: 'mln PLN'
-                    },
-                    labels: {
-                        formatter: function(val) {
-                            return formatNumber(val);
-                        }
-                    }
+                    position: 'top',
+                    horizontalAlign: 'right'
                 },
                 tooltip: {
+                    shared: true,
                     y: {
                         formatter: function(val) {
-                            return formatNumber(val) + ' mln PLN';
+                            return val.toFixed(2) + '%';
                         }
                     }
                 }
             };
-            
-            const chart = new ApexCharts(document.querySelector("#comparisonChart"), options);
-            chart.render();
-            
-            return chart;
+
+            growthChart = new ApexCharts(document.getElementById('growth-chart'), options);
+            growthChart.render();
         }
 
-        // Obsługa filtrów
-        function handleFilters(data, formattedDates, charts) {
-            // Obsługa zakresu czasowego
-            document.getElementById('timeRange').addEventListener('change', function() {
-                const timeRange = this.value;
-                let filteredDates = formattedDates;
-                let filteredData = {...data};
-                
-                // Filtrowanie danych według wybranego zakresu
-                if (timeRange !== 'all') {
-                    let monthsToShow = 12; // default 1 rok
-                    
-                    if (timeRange === '5y') {
-                        monthsToShow = 60;
-                    } else if (timeRange === '10y') {
-                        monthsToShow = 120;
-                    }
-                    
-                    // Ograniczenie liczby dat do ostatnich X miesięcy
-                    const totalMonths = formattedDates.length;
-                    const startIndex = Math.max(0, totalMonths - monthsToShow);
-                    
-                    filteredDates = formattedDates.slice(startIndex);
-                    
-                    // Aktualizacja danych dla każdej miary
-                    Object.keys(data.measures).forEach(measure => {
-                        filteredData.measures[measure] = data.measures[measure].slice(startIndex);
-                        filteredData.growthRates[measure] = data.growthRates[measure].slice(startIndex);
-                    });
-                }
-                
-                // Pobieranie aktualnie zaznaczonych miar
-                const selectedMeasures = [];
-                data.categories.forEach(category => {
-                    const checkbox = document.getElementById(`check-${category}`);
-                    if (checkbox && checkbox.checked) {
-                        selectedMeasures.push(category);
-                    }
-                });
-                
-                // Aktualizacja wykresów
-                updateCharts(charts, filteredData, filteredDates, selectedMeasures);
-            });
+        // Inicjalizacja wykresu struktury
+        function initStructureChart() {
+            const latestData = monetaryData[monetaryData.length - 1];
             
-            // Obsługa checkboxów z miarami
-            data.categories.forEach(category => {
-                const checkbox = document.getElementById(`check-${category}`);
-                if (checkbox) {
-                    checkbox.addEventListener('change', function() {
-                        // Pobranie aktualnie zaznaczonych miar
-                        const selectedMeasures = [];
-                        data.categories.forEach(cat => {
-                            const cb = document.getElementById(`check-${cat}`);
-                            if (cb && cb.checked) {
-                                selectedMeasures.push(cat);
-                            }
-                        });
-                        
-                        // Pobranie aktualnego zakresu dat
-                        const timeRange = document.getElementById('timeRange').value;
-                        let filteredDates = formattedDates;
-                        let filteredData = {...data};
-                        
-                        if (timeRange !== 'all') {
-                            let monthsToShow = 12; // default 1 rok
-                            
-                            if (timeRange === '5y') {
-                                monthsToShow = 60;
-                            } else if (timeRange === '10y') {
-                                monthsToShow = 120;
-                            }
-                            
-                            const totalMonths = formattedDates.length;
-                            const startIndex = Math.max(0, totalMonths - monthsToShow);
-                            
-                            filteredDates = formattedDates.slice(startIndex);
-                            
-                            Object.keys(data.measures).forEach(measure => {
-                                filteredData.measures[measure] = data.measures[measure].slice(startIndex);
-                                filteredData.growthRates[measure] = data.growthRates[measure].slice(startIndex);
-                            });
-                        }
-                        
-                        // Aktualizacja wykresów
-                        updateCharts(charts, filteredData, filteredDates, selectedMeasures);
-                    });
-                }
-            });
-        }
-
-        // Funkcja do aktualizacji wykresów
-        function updateCharts(charts, data, dates, selectedMeasures) {
-            // Definiowanie kolorów dla różnych miar
-            const colors = {
-                'M1': '#3b82f6', // blue
-                'M2': '#4f46e5', // indigo
-                'M3': '#7c3aed', // purple
-                'default': '#d946ef' // fuchsia jako domyślny
-            };
-            
-            // Aktualizacja wykresu agregatów
-            const aggregateSeries = selectedMeasures.map(measure => ({
-                name: measure,
-                data: data.measures[measure]
-            }));
-            
-            charts.aggregateChart.updateOptions({
-                xaxis: {
-                    categories: dates
-                }
-            });
-            charts.aggregateChart.updateSeries(aggregateSeries);
-            
-            // Aktualizacja wykresu dynamiki zmian
-            const growthSeries = selectedMeasures.map(measure => ({
-                name: measure,
-                data: data.growthRates[measure]
-            }));
-            
-            charts.growthChart.updateOptions({
-                xaxis: {
-                    categories: dates
-                }
-            });
-            charts.growthChart.updateSeries(growthSeries);
-            
-            // Aktualizacja wykresu porównawczego
-            charts.comparisonChart.updateOptions({
-                xaxis: {
-                    categories: dates
-                }
-            });
-            charts.comparisonChart.updateSeries(aggregateSeries);
-        }
-
-        // Pomocnicze funkcje
-        function formatNumber(number) {
-            return new Intl.NumberFormat('pl-PL').format(Math.round(number));
-        }
-
-        function getMeasureColor(measure) {
-            if (measure === 'M1') return 'blue';
-            if (measure === 'M2') return 'indigo';
-            if (measure === 'M3') return 'purple';
-            return 'fuchsia';
-        }
-    </script>
-</body>
-</html>
+            // Komponenty M1, M2 i M3
+            const components = [
+                { category: 'M1', name: 'Gotówka w obiegu (poza kasami MIF)', value: latestData['Gotówka w obiegu (
