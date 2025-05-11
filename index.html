@@ -25,14 +25,14 @@
             color: #333;
         }
         .chart-container {
-            height: 500px;
+            min-height: 500px;
             margin-top: 20px;
         }
         .controls {
             margin: 20px 0;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
         }
         select {
             padding: 8px 12px;
@@ -44,14 +44,52 @@
             align-items: center;
             gap: 10px;
             margin-top: 10px;
+            flex-wrap: wrap;
         }
         .time-range label {
             font-weight: bold;
+        }
+        input[type="date"] {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
         }
         .loading {
             text-align: center;
             padding: 20px;
             font-size: 18px;
+        }
+        #column-checkboxes label {
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        #column-checkboxes input[type="checkbox"] {
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            .time-range {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .time-range input {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -63,8 +101,8 @@
         
         <div class="controls" id="controls" style="display: none;">
             <div>
-                <label for="column-select">Wybierz wskaźnik:</label>
-                <select id="column-select"></select>
+                <label>Wybierz wskaźniki do porównania:</label>
+                <div id="column-checkboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-top: 5px;"></div>
             </div>
             
             <div class="time-range">
@@ -85,6 +123,9 @@
         // URL do surowych danych JSON
         const jsonUrl = 'https://raw.githubusercontent.com/dankostecki/mini-fred/main/am_data.json';
         
+        // Zmienna globalna przechowująca dane
+        let globalData = null;
+        
         // Główna funkcja inicjalizująca
         async function initialize() {
             try {
@@ -96,29 +137,21 @@
                     return;
                 }
                 
+                // Zapisz dane globalnie
+                globalData = data;
+                
                 // Przygotuj interfejs użytkownika
                 setupUI(data.columns);
                 
-                // Wyświetl pierwszy dostępny wskaźnik na starcie
-                const firstColumn = data.columns[0];
-                updateChart(firstColumn);
+                // Domyślnie zaznacz pierwszy wskaźnik
+                document.querySelector('input[type="checkbox"]').checked = true;
                 
-                // Dodaj obsługę zmiany wskaźnika
-                document.getElementById('column-select').addEventListener('change', function() {
-                    const selectedColumnId = parseInt(this.value);
-                    const selectedColumn = data.columns.find(col => col.column_id === selectedColumnId);
-                    if (selectedColumn) {
-                        updateChart(selectedColumn);
-                    }
-                });
+                // Wyświetl pierwszy dostępny wskaźnik na starcie
+                updateMultiSeriesChart();
                 
                 // Obsługa przycisku aktualizacji zakresu dat
                 document.getElementById('update-chart').addEventListener('click', function() {
-                    const selectedColumnId = parseInt(document.getElementById('column-select').value);
-                    const selectedColumn = data.columns.find(col => col.column_id === selectedColumnId);
-                    if (selectedColumn) {
-                        updateChart(selectedColumn);
-                    }
+                    updateMultiSeriesChart();
                 });
                 
                 // Ukryj komunikat o ładowaniu i pokaż kontrolki
@@ -141,15 +174,58 @@
         
         // Konfiguracja interfejsu użytkownika
         function setupUI(columns) {
-            const columnSelect = document.getElementById('column-select');
+            const columnCheckboxes = document.getElementById('column-checkboxes');
             
-            // Wypełnij select wskaźnikami
+            // Wypełnij checkboxy wskaźnikami
             columns.forEach(column => {
-                const option = document.createElement('option');
-                option.value = column.column_id;
-                option.textContent = column.column;
-                columnSelect.appendChild(option);
+                const checkboxDiv = document.createElement('div');
+                checkboxDiv.style.margin = '5px 0';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `col-${column.column_id}`;
+                checkbox.value = column.column_id;
+                checkbox.dataset.name = column.column;
+                checkbox.addEventListener('change', function() {
+                    updateMultiSeriesChart();
+                });
+                
+                const label = document.createElement('label');
+                label.htmlFor = `col-${column.column_id}`;
+                label.textContent = column.column;
+                
+                checkboxDiv.appendChild(checkbox);
+                checkboxDiv.appendChild(label);
+                columnCheckboxes.appendChild(checkboxDiv);
             });
+            
+            // Dodaj przyciski zaznacz/odznacz wszystkie
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.style.marginTop = '10px';
+            buttonsDiv.style.textAlign = 'center';
+            
+            const selectAllBtn = document.createElement('button');
+            selectAllBtn.textContent = 'Zaznacz wszystkie';
+            selectAllBtn.style.marginRight = '10px';
+            selectAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('#column-checkboxes input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                });
+                updateMultiSeriesChart();
+            });
+            
+            const deselectAllBtn = document.createElement('button');
+            deselectAllBtn.textContent = 'Odznacz wszystkie';
+            deselectAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('#column-checkboxes input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                updateMultiSeriesChart();
+            });
+            
+            buttonsDiv.appendChild(selectAllBtn);
+            buttonsDiv.appendChild(deselectAllBtn);
+            columnCheckboxes.appendChild(buttonsDiv);
             
             // Ustaw zakres dat na podstawie dostępnych danych
             let minDate = null;
@@ -177,36 +253,91 @@
             }
         }
         
-        // Aktualizacja wykresu dla wybranego wskaźnika
-        function updateChart(column) {
+        // Funkcja do generowania losowego koloru
+        function getRandomColor() {
+            const colors = [
+                '#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', 
+                '#3F51B5', '#03A9F4', '#4CAF50', '#F9CE1D', '#FF9800',
+                '#33B2DF', '#546E7A', '#D4526E', '#13D8AA', '#A5978B',
+                '#4ECDC4', '#C7F464', '#81D4FA', '#FD6A6A', '#2B908F',
+                '#F9A3A4', '#90EE7E', '#FA4443', '#69D2E7', '#5A2A27'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // Aktualizacja wykresu dla wielu wybranych wskaźników
+        function updateMultiSeriesChart() {
+            if (!globalData) return;
+            
             // Pobierz zakres dat z kontrolek
             const startDate = new Date(document.getElementById('start-date').value);
             const endDate = new Date(document.getElementById('end-date').value);
             
-            // Filtruj dane według zakresu dat
-            const filteredData = column.data.filter(item => {
-                const itemDate = new Date(item.date);
-                return itemDate >= startDate && itemDate <= endDate;
+            // Pobierz zaznaczone wskaźniki
+            const selectedCheckboxes = Array.from(document.querySelectorAll('#column-checkboxes input[type="checkbox"]:checked'));
+            
+            // Jeśli nie ma zaznaczonych wskaźników, wyświetl komunikat
+            if (selectedCheckboxes.length === 0) {
+                document.getElementById('chart').innerHTML = '<div style="text-align: center; padding: 50px;">Zaznacz przynajmniej jeden wskaźnik, aby zobaczyć wykres</div>';
+                return;
+            }
+            
+            // Mapa przechowująca wszystkie unikalne daty
+            const allDates = new Set();
+            
+            // Przygotuj serie danych dla każdego zaznaczonego wskaźnika
+            const series = [];
+            const colors = {};
+            
+            selectedCheckboxes.forEach(checkbox => {
+                const columnId = parseInt(checkbox.value);
+                const columnName = checkbox.dataset.name;
+                const column = globalData.columns.find(col => col.column_id === columnId);
+                
+                if (column) {
+                    // Filtruj dane według zakresu dat
+                    const filteredData = column.data.filter(item => {
+                        const itemDate = new Date(item.date);
+                        return itemDate >= startDate && itemDate <= endDate;
+                    });
+                    
+                    // Posortuj dane według daty
+                    filteredData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    
+                    // Dodaj daty do zbioru wszystkich dat
+                    filteredData.forEach(item => {
+                        allDates.add(item.date);
+                    });
+                    
+                    // Przygotuj dane dla wykresu
+                    const seriesData = filteredData.map(item => ({
+                        x: new Date(item.date).getTime(),
+                        y: item.value
+                    }));
+                    
+                    // Przypisz losowy kolor do serii
+                    colors[columnName] = getRandomColor();
+                    
+                    // Dodaj serię do tablicy serii
+                    series.push({
+                        name: columnName,
+                        data: seriesData
+                    });
+                }
             });
             
-            // Posortuj dane według daty
-            filteredData.sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            // Przygotuj dane dla wykresu
-            const seriesData = filteredData.map(item => ({
-                x: new Date(item.date).getTime(),
-                y: item.value
-            }));
+            // Utwórz tytuł z ilością wybranych wskaźników
+            let titleText = selectedCheckboxes.length === 1 
+                ? selectedCheckboxes[0].dataset.name 
+                : `Porównanie ${selectedCheckboxes.length} wskaźników ekonomicznych`;
             
             // Opcje wykresu
             const options = {
-                series: [{
-                    name: column.column,
-                    data: seriesData
-                }],
+                series: series,
+                colors: Object.values(colors),
                 chart: {
                     type: 'line',
-                    height: 450,
+                    height: 550,
                     zoom: {
                         enabled: true,
                         type: 'x'
@@ -232,7 +363,7 @@
                     width: 2
                 },
                 title: {
-                    text: column.column,
+                    text: titleText,
                     align: 'left'
                 },
                 grid: {
@@ -263,24 +394,81 @@
                         formatter: function(val) {
                             return val.toFixed(2);
                         }
-                    }
+                    },
+                    // Dodaj opcję dla wielu osi Y jeśli skale są bardzo różne
+                    ...selectedCheckboxes.length > 1 ? { 
+                        logarithmic: false // zmień na true, jeśli skale są bardzo różne
+                    } : {}
                 },
                 tooltip: {
+                    shared: true,
+                    intersect: false,
                     x: {
                         format: 'dd MMM yyyy'
                     }
                 },
                 legend: {
                     position: 'top'
-                }
+                },
+                responsive: [{
+                    breakpoint: 1000,
+                    options: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
             };
             
-            // Wyczyść poprzedni wykres
-            document.getElementById('chart').innerHTML = '';
-            
-            // Utworz nowy wykres
-            const chart = new ApexCharts(document.getElementById('chart'), options);
-            chart.render();
+            // Dodaj przełącznik skali
+            if (selectedCheckboxes.length > 1) {
+                const scaleToggleDiv = document.createElement('div');
+                scaleToggleDiv.style.marginTop = '10px';
+                scaleToggleDiv.style.textAlign = 'right';
+                
+                const logScaleCheckbox = document.createElement('input');
+                logScaleCheckbox.type = 'checkbox';
+                logScaleCheckbox.id = 'log-scale';
+                
+                const logScaleLabel = document.createElement('label');
+                logScaleLabel.htmlFor = 'log-scale';
+                logScaleLabel.textContent = 'Skala logarytmiczna';
+                
+                scaleToggleDiv.appendChild(logScaleCheckbox);
+                scaleToggleDiv.appendChild(logScaleLabel);
+                
+                // Dodaj do interfejsu przed wykresem
+                const chartContainer = document.getElementById('chart');
+                chartContainer.innerHTML = '';
+                chartContainer.appendChild(scaleToggleDiv);
+                
+                // Dodaj element dla wykresu
+                const chartDiv = document.createElement('div');
+                chartDiv.id = 'chart-inner';
+                chartDiv.style.height = '500px';
+                chartContainer.appendChild(chartDiv);
+                
+                // Obsługa zmiany skali
+                logScaleCheckbox.addEventListener('change', function() {
+                    options.yaxis.logarithmic = this.checked;
+                    
+                    // Renderuj wykres ponownie
+                    document.getElementById('chart-inner').innerHTML = '';
+                    const chart = new ApexCharts(document.getElementById('chart-inner'), options);
+                    chart.render();
+                });
+                
+                // Utworz nowy wykres
+                const chart = new ApexCharts(document.getElementById('chart-inner'), options);
+                chart.render();
+            } else {
+                // Wyczyść poprzedni wykres
+                document.getElementById('chart').innerHTML = '';
+                
+                // Utworz nowy wykres
+                const chart = new ApexCharts(document.getElementById('chart'), options);
+                chart.render();
+            }
         }
         
         // Wyświetlanie błędów
