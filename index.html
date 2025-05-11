@@ -9,6 +9,884 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            overflow-x: hidden;
+        }
+        
+        .main-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background-color: #2c3e50;
+            color: white;
+            transition: all 0.3s;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 15px;
+            background-color: #1a2530;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .sidebar-content {
+            padding: 15px;
+        }
+        
+        .category {
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 5px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        
+        .category-header:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .category-title {
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .category-items {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .category.open .category-items {
+            max-height: 500px;
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            margin-left: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .category-item:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .add-button, .remove-button {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .add-button {
+            color: #2ecc71;
+        }
+        
+        .remove-button {
+            color: #e74c3c;
+            display: none;
+        }
+        
+        .category-item.selected .add-button {
+            display: none;
+        }
+        
+        .category-item.selected .remove-button {
+            display: inline;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .chart-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .date-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+        }
+        
+        .menu-toggle {
+            display: none;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+        }
+        
+        .selected-items {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .selected-items h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .selected-items-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .selected-item {
+            background-color: #e1f5fe;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .remove-selected {
+            margin-left: 5px;
+            cursor: pointer;
+            color: #e74c3c;
+        }
+        
+        .chart-options {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin: 10px 0;
+            gap: 15px;
+        }
+        
+        .scale-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                height: 100%;
+                z-index: 999;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .content {
+                margin-left: 0;
+            }
+            
+            .date-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .date-controls input[type="date"] {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menu-toggle">☰ Menu</button>
+    
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Wskaźniki Ekonomiczne</h3>
+            </div>
+            
+            <div class="sidebar-content" id="sidebar-content">
+                <div class="loading">Ładowanie kategorii...</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h2 class="chart-title" id="chart-title">Analiza wskaźników ekonomicznych</h2>
+                    
+                    <div class="date-controls">
+                        <div>
+                            <label for="start-date">Od:</label>
+                            <input type="date" id="start-date">
+                        </div>
+                        
+                        <div>
+                            <label for="end-date">Do:</label>
+                            <input type="date" id="end-date">
+                        </div>
+                        
+                        <button id="update-chart">Aktualizuj wykres</button>
+                    </div>
+                </div>
+                
+                <div class="selected-items" id="selected-items">
+                    <h3>Wybrane wskaźniki:</h3>
+                    <div class="selected-items-list" id="selected-items-list">
+                        <!-- Tutaj będą wyświetlane wybrane wskaźniki -->
+                    </div>
+                </div>
+                
+                <div class="chart-options" id="chart-options">
+                    <!-- Opcje wykresu będą tutaj dodawane dynamicznie -->
+                </div>
+                
+                <div id="chart" style="height: 500px;">
+                    <div class="loading">Ładowanie danych...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URL do surowych danych JSON
+        const jsonUrl = 'https://raw.githubusercontent.com/dankostecki/mini-fred/main/am_data.json';
+        
+        // Globalne zmienne
+        let globalData = null;
+        let selectedColumns = []; // Przechowuje ID wybranych kolumn
+        let chart = null; // Referencja do instancji wykresu
+        
+        // Kategorie wskaźników (można je dostosować)
+        const categories = [
+            { id: 1, name: "Pieniądz i Kredyt", pattern: /PIENIĄDZ|DEPOZYT|KREDYT|M[0-9]/i },
+            { id: 2, name: "Rynki Finansowe", pattern: /STOPA|RENTOWNOŚĆ|OBLIGACJ|WIBOR|SPREAD/i },
+            { id: 3, name: "Wskaźniki Gospodarcze", pattern: /PRODUKCJ|PKB|INFLACJ|CPI|BEZROBOCIE/i },
+            { id: 4, name: "Handel", pattern: /EKSPORT|IMPORT|BILANS|MIĘDZYNARODOW/i },
+            { id: 5, name: "Inne", pattern: /.*/ } // Kategoria "Inne" dla pozostałych wskaźników
+        ];
+        
+        // Główna funkcja inicjalizująca
+        async function initialize() {
+            try {
+                // Pobierz dane
+                const data = await fetchData(jsonUrl);
+                
+                if (!data || !data.columns || data.columns.length === 0) {
+                    displayError('Nie znaleziono poprawnych danych');
+                    return;
+                }
+                
+                // Zapisz dane globalnie
+                globalData = data;
+                
+                // Przygotuj interfejs użytkownika
+                setupUI(data.columns);
+                
+                // Znajdź M3 i ustaw jako domyślny wskaźnik
+                const m3Column = data.columns.find(col => col.column.includes('M3'));
+                if (m3Column) {
+                    selectColumn(m3Column.column_id, m3Column.column);
+                } else {
+                    // Jeśli nie ma M3, wybierz pierwszy wskaźnik
+                    selectColumn(data.columns[0].column_id, data.columns[0].column);
+                }
+                
+                // Obsługa przycisku aktualizacji wykresu
+                document.getElementById('update-chart').addEventListener('click', function() {
+                    updateChart();
+                });
+                
+                // Obsługa przycisku menu na urządzeniach mobilnych
+                document.getElementById('menu-toggle').addEventListener('click', function() {
+                    document.getElementById('sidebar').classList.toggle('active');
+                });
+                
+            } catch (error) {
+                displayError('Wystąpił błąd podczas pobierania danych: ' + error.message);
+            }
+        }
+        
+        // Funkcja pobierająca dane z JSON
+        async function fetchData(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return await response.json();
+        }
+        
+        // Konfiguracja interfejsu użytkownika
+        function setupUI(columns) {
+            const sidebarContent = document.getElementById('sidebar-content');
+            sidebarContent.innerHTML = ''; // Wyczyść zawartość
+            
+            // Przypisz każdą kolumnę do odpowiedniej kategorii
+            const categorizedColumns = {};
+            
+            categories.forEach(category => {
+                categorizedColumns[category.id] = [];
+            });
+            
+            columns.forEach(column => {
+                let assignedCategory = false;
+                
+                // Przypisz do pierwszej pasującej kategorii (oprócz "Inne")
+                for (let i = 0; i < categories.length - 1; i++) {
+                    if (categories[i].pattern.test(column.column)) {
+                        categorizedColumns[categories[i].id].push(column);
+                        assignedCategory = true;
+                        break;
+                    }
+                }
+                
+                // Jeśli nie pasuje do żadnej kategorii, przypisz do "Inne"
+                if (!assignedCategory) {
+                    categorizedColumns[categories[categories.length - 1].id].push(column);
+                }
+            });
+            
+            // Utwórz drzewko kategorii
+            categories.forEach(category => {
+                const categoryColumns = categorizedColumns[category.id];
+                
+                if (categoryColumns.length > 0) {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'category';
+                    categoryDiv.setAttribute('data-category-id', category.id);
+                    
+                    const categoryHeader = document.createElement('div');
+                    categoryHeader.className = 'category-header';
+                    categoryHeader.innerHTML = `
+                        <h4 class="category-title">${category.name} (${categoryColumns.length})</h4>
+                        <span class="category-toggle">▶</span>
+                    `;
+                    
+                    const categoryItems = document.createElement('div');
+                    categoryItems.className = 'category-items';
+                    
+                    // Dodaj elementy kategorii
+                    categoryColumns.forEach(column => {
+                        const item = document.createElement('div');
+                        item.className = 'category-item';
+                        item.setAttribute('data-column-id', column.column_id);
+                        item.setAttribute('data-column-name', column.column);
+                        
+                        item.innerHTML = `
+                            <span class="item-name">${shortenColumnName(column.column)}</span>
+                            <div>
+                                <button class="add-button" title="Dodaj do wykresu">+</button>
+                                <button class="remove-button" title="Usuń z wykresu">-</button>
+                            </div>
+                        `;
+                        
+                        categoryItems.appendChild(item);
+                    });
+                    
+                    categoryDiv.appendChild(categoryHeader);
+                    categoryDiv.appendChild(categoryItems);
+                    sidebarContent.appendChild(categoryDiv);
+                    
+                    // Obsługa kliknięcia w nagłówek kategorii
+                    categoryHeader.addEventListener('click', function() {
+                        categoryDiv.classList.toggle('open');
+                        const toggle = categoryHeader.querySelector('.category-toggle');
+                        toggle.textContent = categoryDiv.classList.contains('open') ? '▼' : '▶';
+                    });
+                    
+                    // Otwórz domyślnie pierwszą kategorię
+                    if (category.id === 1) {
+                        categoryDiv.classList.add('open');
+                        categoryHeader.querySelector('.category-toggle').textContent = '▼';
+                    }
+                }
+            });
+            
+            // Dodaj nasłuchiwanie zdarzeń dla przycisków dodaj/usuń
+            document.querySelectorAll('.add-button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const item = this.closest('.category-item');
+                    const columnId = parseInt(item.getAttribute('data-column-id'));
+                    const columnName = item.getAttribute('data-column-name');
+                    selectColumn(columnId, columnName);
+                });
+            });
+            
+            document.querySelectorAll('.remove-button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const item = this.closest('.category-item');
+                    const columnId = parseInt(item.getAttribute('data-column-id'));
+                    unselectColumn(columnId);
+                });
+            });
+            
+            // Ustaw zakres dat na podstawie dostępnych danych
+            setupDateRange(columns);
+        }
+        
+        // Skróć nazwę kolumny dla lepszej czytelności w menu
+        function shortenColumnName(name) {
+            // Jeśli nazwa jest za długa, skróć ją
+            if (name.length > 35) {
+                return name.substring(0, 32) + '...';
+            }
+            return name;
+        }
+        
+        // Ustawienie zakresu dat
+        function setupDateRange(columns) {
+            let minDate = null;
+            let maxDate = null;
+            
+            columns.forEach(column => {
+                column.data.forEach(item => {
+                    const date = new Date(item.date);
+                    if (!minDate || date < minDate) minDate = date;
+                    if (!maxDate || date > maxDate) maxDate = date;
+                });
+            });
+            
+            if (minDate && maxDate) {
+                const startDateInput = document.getElementById('start-date');
+                const endDateInput = document.getElementById('end-date');
+                
+                startDateInput.min = minDate.toISOString().split('T')[0];
+                startDateInput.max = maxDate.toISOString().split('T')[0];
+                startDateInput.value = minDate.toISOString().split('T')[0];
+                
+                endDateInput.min = minDate.toISOString().split('T')[0];
+                endDateInput.max = maxDate.toISOString().split('T')[0];
+                endDateInput.value = maxDate.toISOString().split('T')[0];
+            }
+        }
+        
+        // Dodaj kolumnę do wybranych
+        function selectColumn(columnId, columnName) {
+            // Jeśli kolumna nie jest jeszcze wybrana, dodaj ją
+            if (!selectedColumns.includes(columnId)) {
+                selectedColumns.push(columnId);
+                
+                // Oznacz element jako wybrany w menu
+                const item = document.querySelector(`.category-item[data-column-id="${columnId}"]`);
+                if (item) {
+                    item.classList.add('selected');
+                }
+                
+                // Dodaj do listy wybranych elementów
+                updateSelectedItemsList();
+                
+                // Zaktualizuj wykres
+                updateChart();
+            }
+        }
+        
+        // Usuń kolumnę z wybranych
+        function unselectColumn(columnId) {
+            // Znajdź indeks kolumny w tablicy
+            const index = selectedColumns.indexOf(columnId);
+            
+            if (index !== -1) {
+                // Usuń kolumnę z tablicy
+                selectedColumns.splice(index, 1);
+                
+                // Odznacz element w menu
+                const item = document.querySelector(`.category-item[data-column-id="${columnId}"]`);
+                if (item) {
+                    item.classList.remove('selected');
+                }
+                
+                // Zaktualizuj listę wybranych elementów
+                updateSelectedItemsList();
+                
+                // Zaktualizuj wykres
+                updateChart();
+            }
+        }
+        
+        // Aktualizacja listy wybranych elementów
+        function updateSelectedItemsList() {
+            const selectedItemsList = document.getElementById('selected-items-list');
+            selectedItemsList.innerHTML = '';
+            
+            if (selectedColumns.length === 0) {
+                selectedItemsList.innerHTML = '<div>Nie wybrano żadnych wskaźników</div>';
+                return;
+            }
+            
+            selectedColumns.forEach(columnId => {
+                const column = globalData.columns.find(col => col.column_id === columnId);
+                if (column) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'selected-item';
+                    itemDiv.innerHTML = `
+                        <span>${shortenColumnName(column.column)}</span>
+                        <span class="remove-selected" data-column-id="${columnId}">✕</span>
+                    `;
+                    selectedItemsList.appendChild(itemDiv);
+                }
+            });
+            
+            // Dodaj obsługę usuwania z listy
+            document.querySelectorAll('.remove-selected').forEach(button => {
+                button.addEventListener('click', function() {
+                    const columnId = parseInt(this.getAttribute('data-column-id'));
+                    unselectColumn(columnId);
+                });
+            });
+        }
+        
+        // Funkcja do generowania kolorów dla serii
+        function getColumnColor(index) {
+            const colors = [
+                '#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', 
+                '#3F51B5', '#03A9F4', '#4CAF50', '#F9CE1D', '#FF9800',
+                '#33B2DF', '#546E7A', '#D4526E', '#13D8AA', '#A5978B',
+                '#4ECDC4', '#C7F464', '#81D4FA', '#FD6A6A', '#2B908F',
+                '#F9A3A4', '#90EE7E', '#FA4443', '#69D2E7', '#5A2A27'
+            ];
+            return colors[index % colors.length];
+        }
+        
+        // Aktualizacja wykresu
+        function updateChart() {
+            if (!globalData || selectedColumns.length === 0) {
+                document.getElementById('chart').innerHTML = '<div class="loading">Wybierz przynajmniej jeden wskaźnik, aby zobaczyć wykres</div>';
+                return;
+            }
+            
+            // Pobierz zakres dat
+            const startDate = new Date(document.getElementById('start-date').value);
+            const endDate = new Date(document.getElementById('end-date').value);
+            
+            // Przygotuj serie danych
+            const series = [];
+            const colors = [];
+            
+            selectedColumns.forEach((columnId, index) => {
+                const column = globalData.columns.find(col => col.column_id === columnId);
+                
+                if (column) {
+                    // Filtruj dane według zakresu dat
+                    const filteredData = column.data.filter(item => {
+                        const itemDate = new Date(item.date);
+                        return itemDate >= startDate && itemDate <= endDate;
+                    });
+                    
+                    // Posortuj dane według daty
+                    filteredData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    
+                    // Przygotuj dane dla wykresu
+                    const seriesData = filteredData.map(item => ({
+                        x: new Date(item.date).getTime(),
+                        y: item.value
+                    }));
+                    
+                    // Dodaj serię do tablicy serii
+                    series.push({
+                        name: column.column,
+                        data: seriesData
+                    });
+                    
+                    // Dodaj kolor do tablicy kolorów
+                    colors.push(getColumnColor(index));
+                }
+            });
+            
+            // Aktualizuj tytuł wykresu
+            updateChartTitle();
+            
+            // Aktualizuj opcje wykresu
+            updateChartOptions(series, colors);
+            
+            // Renderuj wykres
+            renderChart(series, colors);
+        }
+        
+        // Aktualizacja tytułu wykresu
+        function updateChartTitle() {
+            const chartTitle = document.getElementById('chart-title');
+            
+            if (selectedColumns.length === 1) {
+                const column = globalData.columns.find(col => col.column_id === selectedColumns[0]);
+                chartTitle.textContent = column ? column.column : 'Analiza wskaźnika ekonomicznego';
+            } else {
+                chartTitle.textContent = `Porównanie ${selectedColumns.length} wskaźników ekonomicznych`;
+            }
+        }
+        
+        // Aktualizacja opcji wykresu
+        function updateChartOptions(series, colors) {
+            const chartOptions = document.getElementById('chart-options');
+            chartOptions.innerHTML = '';
+            
+            // Dodaj przełącznik skali logarytmicznej tylko jeśli wybrano więcej niż 1 wskaźnik
+            if (selectedColumns.length > 1) {
+                const scaleToggle = document.createElement('div');
+                scaleToggle.className = 'scale-toggle';
+                
+                const logScaleCheckbox = document.createElement('input');
+                logScaleCheckbox.type = 'checkbox';
+                logScaleCheckbox.id = 'log-scale';
+                
+                const logScaleLabel = document.createElement('label');
+                logScaleLabel.htmlFor = 'log-scale';
+                logScaleLabel.textContent = 'Skala logarytmiczna';
+                
+                scaleToggle.appendChild(logScaleCheckbox);
+                scaleToggle.appendChild(logScaleLabel);
+                
+                // Obsługa zmiany skali
+                logScaleCheckbox.addEventListener('change', function() {
+                    renderChart(series, colors, this.checked);
+                });
+                
+                chartOptions.appendChild(scaleToggle);
+            }
+        }
+        
+        // Renderowanie wykresu
+        function renderChart(series, colors, logarithmic = false) {
+            // Opcje wykresu
+            const options = {
+                series: series,
+                colors: colors,
+                chart: {
+                    type: 'line',
+                    height: 500,
+                    fontFamily: 'Arial, sans-serif',
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 800
+                    },
+                    zoom: {
+                        enabled: true,
+                        type: 'x'
+                    },
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: true,
+                            selection: true,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: true,
+                            reset: true
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 2,
+                    lineCap: 'round'
+                },
+                grid: {
+                    borderColor: '#f1f1f1',
+                    row: {
+                        colors: ['transparent', 'transparent'],
+                        opacity: 0.5
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        formatter: function(val) {
+                            return new Date(val).toLocaleDateString('pl-PL', {
+                                year: 'numeric',
+                                month: 'short'
+                            });
+                        },
+                        style: {
+                            colors: '#666',
+                            fontSize: '12px'
+                        }
+                    },
+                    title: {
+                        text: 'Data',
+                        style: {
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            color: '#333'
+                        }
+                    },
+                    axisBorder: {
+                        show: true,
+                        color: '#e0e0e0'
+                    },
+                    axisTicks: {
+                        show: true,
+                        color: '#e0e0e0'
+                    }
+                },
+                yaxis: {
+                    logarithmic: logarithmic,
+                    title: {
+                        text: 'Wartość',
+                        style: {
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            color: '#333'
+                        }
+                    },
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(2);
+                        },
+                        style: {
+                            colors: '#666',
+                            fontSize: '12px'
+                        }
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    intersect: false,
+                    x: {
+                        format: 'dd MMM yyyy'
+                    },
+                    y: {
+                        formatter: function(val) {
+                            return val.toFixed(2);
+                        }
+                    },
+                    style: {
+                        fontSize: '12px'
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'center',
+                    fontSize: '14px',
+                    markers: {
+                        width: 12,
+                        height: 12,
+                        radius: 6
+                    },
+                    onItemHover: {
+                        highlightDataSeries: true
+                    },
+                    onItemClick: {
+                        toggleDataSeries: true
+                    }
+                },
+                responsive: [{
+                    breakpoint: 1000,
+                    options: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+            
+            // Wyczyść poprzedni wykres
+            document.getElementById('chart').innerHTML = '';
+            
+            // Utwórz nowy wykres
+            chart = new ApexCharts(document.getElementById('chart'), options);
+            chart.render();
+        }
+        
+        // Wyświetlanie błędów
+        function displayError(message) {
+            document.getElementById('chart').innerHTML = `<div class="loading" style="color: red">${message}</div>`;
+        }
+        
+        // Inicjalizacja po załadowaniu strony
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>.cloudflare.com/ajax/libs/apexcharts/3.42.0/apexcharts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
         }
