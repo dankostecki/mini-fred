@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-FRED: Agregaty Monetarne - Wizualizacja</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.15/themes/default/style.min.css" />
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+        .sidebar {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            height: 100%;
+        }
+        .jstree-default .jstree-clicked {
+            background-color: #007bff3b !important;
+        }
+        .selected-series {
+            margin-top: 20px;
+        }
+        .selected-series .badge {
+            margin-right: 5px;
+            margin-bottom: 5px;
+            padding: 8px;
+            cursor: pointer;
+        }
+        .legend-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            border-radius: 2px;
+        }
+        .chart-options {
+            margin-top: 10px;
+        }
+        .chart-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .color-picker {
+            margin-top: 10px;
+        }
+        .period-selector {
+            margin-bottom: 15px;
+        }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Nagłówek -->
+    <header class="bg-primary text-white py-3 mb-4">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h4 mb-0">Mini-FRED</h1>
+                <a href="index.html" class="btn btn-outline-light btn-sm">Strona główna</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="text-center">Agregaty Monetarne - Wizualizacja</h1>
+                <p class="text-center text-muted">Interaktywna wizualizacja agregatów monetarnych dla Polski</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Lewy panel z drzewkiem kategorii -->
+            <div class="col-md-3">
+                <div class="sidebar">
+                    <h4>Kategorie danych</h4>
+                    <div id="monetaryTree"></div>
+                    
+                    <div class="selected-series">
+                        <h5>Wybrane serie</h5>
+                        <div id="selectedSeries"></div>
+                    </div>
+                    
+                    <div class="chart-options">
+                        <h5>Opcje wykresu</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showPointsCheckbox">
+                            <label class="form-check-label" for="showPointsCheckbox">
+                                Pokaż punkty danych
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableAnimationCheckbox" checked>
+                            <label class="form-check-label" for="enableAnimationCheckbox">
+                                Animacje
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableZoomCheckbox" checked>
+                            <label class="form-check-label" for="enableZoomCheckbox">
+                                Zoom
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Prawy panel z wykresem -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-controls">
+                            <select id="chartTypeSelector" class="form-select form-select-sm" style="width: auto;">
+                                <option value="line">Liniowy</option>
+                                <option value="area">Obszarowy</option>
+                                <option value="bar">Słupkowy</option>
+                                <option value="candlestick">Świecowy</option>
+                            </select>
+                            
+                            <select id="periodSelector" class="form-select form-select-sm" style="width: auto;">
+                                <option value="all">Cały okres</option>
+                                <option value="1y">Ostatni rok</option>
+                                <option value="2y">Ostatnie 2 lata</option>
+                                <option value="5y">Ostatnie 5 lat</option>
+                                <option value="10y">Ostatnie 10 lat</option>
+                            </select>
+                            
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="dataType" id="absoluteValues" checked>
+                                <label class="form-check-label" for="absoluteValues">
+                                    Wartości absolutne
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="dataType" id="percentChange">
+                                <label class="form-check-label" for="percentChange">
+                                    Zmiana %
+                                </label>
+                            </div>
+                            
+                            <button id="downloadCSV" class="btn btn-sm btn-outline-secondary">
+                                Pobierz CSV
+                            </button>
+                            <button id="downloadChart" class="btn btn-sm btn-outline-secondary">
+                                Pobierz wykres
+                            </button>
+                        </div>
+                        
+                        <div id="legendContainer" class="legend-container"></div>
+                        <div id="chart" class="chart-container"></div>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Statystyki</h5>
+                        <div id="statsContainer" class="row">
+                            <div class="col-md-12">
+                                <p class="text-center text-muted">Wybierz serię danych, aby zobaczyć statystyki</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stopka -->
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p class="mb-0">Mini-FRED &copy; 2025 | <a href="https://github.com/dankostecki/mini-fred" class="text-white">GitHub</a></p>
+        </div>
+    </footer>
+    
+    <div id="loadingIndicator" class="loading d-none">
+        <div class="spinner-border text-primary loading-spinner" role="status">
+            <span class="visually-hidden">Ładowanie...</span>
+        </div>
+    </div>
+    
+    <!-- Skrypty -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.15/jstree.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.44.2/apexcharts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="data-converter.js"></script>
+
+    <script>
+        // Główny kod aplikacji
+        document.addEventListener('DOMContentLoaded', function() {
+            // Stan aplikacji
+            const appState = {
+                data: null,
+                categoryTree: null,
+                selectedSeries: [],
+                chart: null,
+                chartOptions: {
+                    type: 'line',
+                    period: 'all',
+                    dataType: 'absolute',
+                    showPoints: false,
+                    enableAnimation: true,
+                    enableZoom: true
+                },
+                colors: [
+                    '#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', 
+                    '#3F51B5', '#546E7A', '#D4526E', '#8D5B4C', '#F86624', 
+                    '#D7263D', '#1B998B', '#2E294E', '#F46036', '#E2C044'
+                ]
+            };
+
+            // Ładowanie danych
+            loadData();
+
+            // Inicjalizacja elementów interfejsu
+            initUI();
+
+            // --- Funkcje pomocnicze ---
+
+            // Ładowanie danych JSON
+            function loadData() {
+                toggleLoading(true);
+                
+                fetch('am_data.json')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Błąd pobierania danych: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        appState.data = data;
+                        // Użycie konwertera danych
+                        const processedData = processMonetaryData(data);
+                        appState.categoryTree = processedData.categoryTree;
+                        initTreeView();
+                        toggleLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Błąd podczas ładowania danych:', error);
+                        toggleLoading(false);
+                        
+                        // Jeśli wystąpił błąd, spróbuj wygenerować przykładowe dane
+                        console.log('Próba wygenerowania przykładowych danych...');
+                        try {
+                            // Sprawdź, czy funkcja generująca przykładowe dane jest dostępna
+                            if (typeof generateMonetaryAggregatesData === 'function') {
+                                const sampleData = generateMonetaryAggregatesData();
+                                appState.data = sampleData;
+                                const processedData = processMonetaryData(sampleData);
+                                appState.categoryTree = processedData.categoryTree;
+                                initTreeView();
+                                
+                                // Powiadomienie użytkownika
+                                alert('Nie udało się załadować rzeczywistych danych. Wygenerowano przykładowe dane do celów demonstracyjnych.');
+                            } else {
+                                throw new Error('Funkcja generująca przykładowe dane jest niedostępna.');
+                            }
+                        } catch (genError) {
+                            console.error('Nie udało się wygenerować przykładowych danych:', genError);
+                            alert('Nie udało się załadować danych. Spróbuj odświeżyć stronę lub sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.');
+                        }
+                    })
+                    .finally(() => {
+                        toggleLoading(false);
+                    });
+            }
+
+            // Inicjalizacja widoku drzewa
+            function initTreeView() {
+                $('#monetaryTree').jstree('destroy'); // Zniszczenie poprzedniej instancji, jeśli istnieje
+                
+                $('#monetaryTree').jstree({
+                    'core': {
+                        'data': appState.categoryTree,
+                        'themes': {
+                            'responsive': false
+                        }
+                    },
+                    'types': {
+                        'default': {
+                            'icon': 'jstree-folder'
+                        },
+                        'series': {
+                            'icon': 'jstree-file'
+                        }
+                    },
+                    'plugins': ['types', 'wholerow']
+                }).on('select_node.jstree', function(e, data) {
+                    const node = data.node;
+                    
+                    // Jeśli wybrano serię danych
+                    if (node.original.type === 'series' && node.original.data && node.original.data.seriesData) {
+                        addSeries(node.id, node.text, node.original.data.seriesData);
+                    }
+                });
+            }
+
+            // Dodanie serii do wykresu
+            function addSeries(id, name, seriesData) {
+                // Sprawdzenie czy seria już istnieje na wykresie
+                const exists = appState.selectedSeries.some(series => series.id === id);
+                
+                if (!exists) {
+                    // Dodanie nowej serii
+                    const colorIndex = appState.selectedSeries.length % appState.colors.length;
+                    const newSeries = {
+                        id: id,
+                        name: name,
+                        data: seriesData,
+                        color: appState.colors[colorIndex]
+                    };
+                    
+                    appState.selectedSeries.push(newSeries);
+                    updateSelectedSeriesList();
+                    updateChart();
+                }
+            }
+
+            // Usunięcie serii z wykresu
+            function removeSeries(id) {
+                appState.selectedSeries = appState.selectedSeries.filter(series => series.id !== id);
+                updateSelectedSeriesList();
+                updateChart();
+            }
+
+            // Aktualizacja listy wybranych serii
+            function updateSelectedSeriesList() {
+                const container = document.getElementById('selectedSeries');
+                container.innerHTML = '';
+                
+                if (appState.selectedSeries.length === 0) {
+                    container.innerHTML = '<p class="text-muted">Brak wybranych serii</p>';
+                    return;
+                }
+                
+                appState.selectedSeries.forEach(series => {
+                    const badge = document.createElement('span');
+                    badge.classList.add('badge', 'mb-1', 'd-inline-flex', 'align-items-center');
+                    badge.style.backgroundColor = series.color;
+                    badge.innerHTML = `
+                        ${series.name}
+                        <button type="button" class="btn-close btn-close-white ms-2" 
+                                aria-label="Usuń" style="font-size: 0.65em;"></button>
+                    `;
+                    
+                    badge.querySelector('.btn-close').addEventListener('click', () => {
+                        removeSeries(series.id);
+                    });
+                    
+                    container.appendChild(badge);
+                    container.appendChild(document.createTextNode(' '));
+                });
+                
+                updateStats();
+            }
+
+            // Aktualizacja wykresu
+            function updateChart() {
+                if (appState.selectedSeries.length === 0) {
+                    // Brak danych do wyświetlenia
+                    if (appState.chart) {
+                        appState.chart.updateOptions({
+                            series: []
+                        });
+                    }
+                    document.getElementById('legendContainer').innerHTML = '';
+                    return;
+                }
+                
+                // Przygotowanie danych dla wykresu
+                const series = [];
+                const allDates = new Set();
+                
+                // Zbieranie wszystkich dat z danych
+                appState.selectedSeries.forEach(seriesItem => {
+                    seriesItem.data.forEach(point => {
+                        allDates.add(point[0]);
+                    });
+                });
+                
+                // Sortowanie dat
+                const sortedDates = Array.from(allDates).sort();
+                
+                // Filtrowanie dat według wybranego okresu
+                const filteredDates = filterDataByPeriod(sortedDates, appState.chartOptions.period);
+                
+                // Przygotowanie serii danych
+                appState.selectedSeries.forEach(seriesItem => {
+                    // Tworzenie mapy data -> wartość dla łatwego dostępu
+                    const dataMap = new Map();
+                    seriesItem.data.forEach(point => {
+                        dataMap.set(point[0], point[1]);
+                    });
+                    
+                    // Tworzenie punktów danych dla wykresu
+                    const dataPoints = [];
+                    let prevValue = null;
+                    
+                    filteredDates.forEach(date => {
+                        const value = dataMap.get(date);
+                        
+                        if (value !== undefined) {
+                            // Obliczanie wartości w zależności od wybranego typu danych
+                            let displayValue = value;
+                            
+                            if (appState.chartOptions.dataType === 'percent' && prevValue !== null) {
+                                displayValue = ((value - prevValue) / prevValue) * 100;
+                            }
+                            
+                            dataPoints.push({
+                                x: new Date(date),
